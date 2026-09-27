@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#09070f" />
+  <title>Tato, patrz twoje kwiatki! — Garden Tycoon</title>
+  <style>
+    :root{
+      --bg:#09070f; --panel:rgba(18,14,28,.62); --panel2:rgba(28,21,44,.78);
+      --line:rgba(255,255,255,.09); --txt:#f7f4ff; --muted:#aaa2bb;
+      --yellow:#ffd84a; --yellow2:#ffb800; --purple:#9d57ff; --purple2:#6630d9;
+      --green:#72ff9d; --danger:#ff5f84; --cyan:#62e7ff;
+      --shadow:0 24px 80px rgba(0,0,0,.48);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button{font:inherit;color:inherit}
+    #game{position:fixed;inset:0;overflow:hidden;background:
+      radial-gradient(circle at 50% 35%,rgba(121,65,220,.16),transparent 35%),
+      radial-gradient(circle at 50% 110%,rgba(255,211,54,.08),transparent 35%),
+      #09070f}
+    #scene{position:absolute;inset:0;z-index:0}
+    #scene canvas{display:block;width:100%;height:100%;touch-action:none}
+
+    .vignette{position:absolute;inset:0;z-index:1;pointer-events:none;background:
+      linear-gradient(to bottom,rgba(7,5,12,.68),transparent 18%,transparent 72%,rgba(7,5,12,.84)),
+      radial-gradient(circle at center,transparent 38%,rgba(0,0,0,.62) 100%)}
+    .grain{position:absolute;inset:-50%;z-index:2;pointer-events:none;opacity:.04;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+      animation:grain .3s steps(2) infinite}
+    @keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(3%,-2%)}50%{transform:translate(-2%,3%)}75%{transform:translate(2%,2%)}100%{transform:translate(-3%,-1%)}}
+
+    .hud{position:absolute;z-index:10;inset:0;pointer-events:none;padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(14px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left))}
+    .glass{background:linear-gradient(180deg,rgba(31,24,47,.72),rgba(16,12,25,.68));border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(18px) saturate(145%);-webkit-backdrop-filter:blur(18px) saturate(145%)}
+
+    .topbar{position:absolute;left:50%;top:max(14px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;gap:8px;align-items:center;padding:8px;border-radius:22px;pointer-events:auto}
+    .brand{display:flex;align-items:center;gap:10px;padding:6px 10px 6px 7px}
+    .brandmark{width:34px;height:34px;border-radius:12px;background:linear-gradient(135deg,var(--yellow),#ff9851 48%,var(--purple));display:grid;place-items:center;color:#151018;font-weight:1000;box-shadow:0 0 28px rgba(255,215,69,.28)}
+    .brandtext{display:flex;flex-direction:column;line-height:1}
+    .brandtext b{font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+    .brandtext span{font-size:9px;color:var(--muted);margin-top:4px;letter-spacing:.08em}
+    .stat{min-width:104px;display:flex;align-items:center;gap:9px;padding:7px 11px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.055)}
+    .stat i{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;font-style:normal;font-size:14px;background:rgba(255,255,255,.06)}
+    .stat .v{font-size:12px;font-weight:800;line-height:1.1}
+    .stat .k{font-size:8px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:3px}
+    .coin i{color:var(--yellow)} .gem i{color:#c791ff}
+
+    .levelBox{position:absolute;top:92px;left:50%;transform:translateX(-50%);width:min(360px,calc(100vw - 34px));text-align:center;pointer-events:none}
+    .levelHead{display:flex;justify-content:center;align-items:center;gap:8px;margin-bottom:7px;text-shadow:0 2px 10px #000}
+    .levelHead strong{font-size:11px;text-transform:uppercase;letter-spacing:.16em}
+    .levelHead span{font-size:10px;color:var(--muted)}
+    .xpbar{height:5px;border-radius:999px;background:rgba(255,255,255,.09);overflow:hidden}
+    .xpfill{height:100%;width:0%;border-radius:inherit;background:linear-gradient(90deg,var(--purple),var(--yellow));box-shadow:0 0 18px rgba(255,213,70,.55);transition:width .35s cubic-bezier(.2,.8,.2,1)}
+
+    .leftPanel,.rightPanel{position:absolute;top:112px;width:250px;border-radius:24px;padding:15px;pointer-events:auto}
+    .leftPanel{left:18px}.rightPanel{right:18px}
+    .panelTitle{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+    .panelTitle b{font-size:11px;text-transform:uppercase;letter-spacing:.13em}
+    .panelTitle span{font-size:9px;color:var(--muted)}
+    .quest{padding:11px;border-radius:15px;background:rgba(255,255,255,.037);border:1px solid rgba(255,255,255,.055);margin-top:8px}
+    .questTop{display:flex;justify-content:space-between;gap:10px;font-size:10px}
+    .questTop b{font-size:10px}
+    .questTop em{font-style:normal;color:var(--yellow);font-size:9px}
+    .qbar{height:4px;border-radius:999px;background:rgba(255,255,255,.08);margin-top:8px;overflow:hidden}
+    .qfill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--purple),var(--yellow));transition:.3s}
+
+    .upgrade{display:grid;grid-template-columns:38px 1fr auto;gap:10px;align-items:center;padding:9px;border-radius:15px;border:1px solid transparent;transition:.2s;background:rgba(255,255,255,.028);margin-top:7px}
+    .upgrade:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.05)}
+    .upIcon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,216,74,.12),rgba(157,87,255,.17));font-size:17px}
+    .upName{font-size:10px;font-weight:800}.upDesc{font-size:8px;color:var(--muted);margin-top:3px}
+    .buy{border:0;border-radius:10px;padding:8px 9px;background:linear-gradient(135deg,var(--yellow),var(--yellow2));color:#251c00;font-size:9px;font-weight:900;cursor:pointer;box-shadow:0 8px 24px rgba(255,184,0,.13);transition:.2s}
+    .buy:hover{filter:brightness(1.07);transform:scale(1.03)} .buy:active{transform:scale(.96)} .buy:disabled{opacity:.35;filter:grayscale(1);cursor:not-allowed}
+    .lvl{font-size:8px;color:#cdbde8;margin-top:2px}
+
+    .plantInfo{position:absolute;left:50%;bottom:122px;transform:translateX(-50%);text-align:center;width:min(460px,90vw);pointer-events:none;text-shadow:0 3px 16px #000}
+    .rarity{display:inline-flex;gap:7px;align-items:center;padding:6px 10px;border-radius:999px;background:rgba(10,8,15,.48);border:1px solid rgba(255,255,255,.08);font-size:8px;text-transform:uppercase;letter-spacing:.15em}
+    .rarity .dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 12px currentColor}
+    .plantName{margin:8px 0 0;font-size:clamp(24px,3.4vw,44px);font-weight:900;letter-spacing:-.045em}
+    .plantSub{font-size:10px;color:#c5bdd1;margin-top:5px}
+
+    .bottomNav{position:absolute;left:50%;bottom:max(15px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:7px;padding:8px;border-radius:22px;pointer-events:auto}
+    .navBtn{min-width:74px;height:48px;border:1px solid transparent;border-radius:15px;background:transparent;color:#b7aec6;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:.2s}
+    .navBtn span:first-child{font-size:16px}.navBtn span:last-child{font-size:8px;text-transform:uppercase;letter-spacing:.09em}
+    .navBtn:hover,.navBtn.active{color:white;background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.07)}
+    .seedBtn{min-width:108px;background:linear-gradient(135deg,var(--yellow),#ffb84a)!important;color:#201700!important;border:none!important;box-shadow:0 10px 30px rgba(255,194,39,.16)}
+    .seedBtn span:last-child{font-weight:900}
+
+    .tapHint{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);z-index:9;pointer-events:none;text-align:center;opacity:.85;transition:.3s}
+    .tapHint div{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.2em;text-shadow:0 3px 16px #000}
+    .tapHint span{display:block;font-size:8px;color:var(--muted);margin-top:5px;text-shadow:0 3px 16px #000}
+
+    .floatText{position:fixed;z-index:50;pointer-events:none;font-size:14px;font-weight:1000;color:var(--yellow);text-shadow:0 3px 12px rgba(0,0,0,.8);animation:floatUp .85s ease-out forwards}
+    @keyframes floatUp{0%{opacity:0;transform:translate(-50%,0) scale(.7)}20%{opacity:1;transform:translate(-50%,-10px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-74px) scale(.9)}}
+
+    .modalBack{position:absolute;inset:0;z-index:100;background:rgba(4,3,8,.72);backdrop-filter:blur(16px);display:none;align-items:center;justify-content:center;padding:18px;pointer-events:auto}
+    .modalBack.open{display:flex;animation:fadeIn .2s ease}
+    @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+    .modal{width:min(560px,96vw);border-radius:30px;padding:22px;position:relative;overflow:hidden}
+    .modal:before{content:"";position:absolute;width:260px;height:260px;border-radius:50%;background:var(--purple);filter:blur(100px);opacity:.12;top:-160px;right:-80px;pointer-events:none}
+    .modalHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+    .modalHeader h2{font-size:23px;margin:0;letter-spacing:-.04em}.modalHeader p{font-size:10px;color:var(--muted);margin:7px 0 0;line-height:1.5}
+    .close{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);cursor:pointer}
+    .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:18px}
+    .card{min-height:120px;border-radius:18px;padding:13px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.065);position:relative;overflow:hidden}
+    .card b{font-size:10px}.card .big{font-size:28px;margin:14px 0 6px}.card p{font-size:8px;color:var(--muted);margin:0;line-height:1.45}
+    .card.locked{filter:saturate(.2);opacity:.45}
+    .card.locked .big{filter:blur(4px)}
+    .packWrap{text-align:center;padding:22px 0 5px}
+    .pack{width:156px;height:195px;margin:0 auto 18px;border-radius:28px;position:relative;display:grid;place-items:center;background:
+      linear-gradient(150deg,rgba(255,255,255,.2),transparent 35%),
+      linear-gradient(135deg,#2a1c49,#120e20 50%,#38205f);border:1px solid rgba(255,255,255,.17);box-shadow:0 30px 80px rgba(0,0,0,.5),0 0 55px rgba(156,83,255,.22);transform:rotate(-3deg);transition:.35s}
+    .pack:before{content:"SEED DROP";position:absolute;top:16px;font-size:9px;letter-spacing:.24em;color:#d9c8ff}
+    .pack .logo{width:72px;height:72px;border-radius:24px;background:linear-gradient(135deg,var(--yellow),#ff945a,var(--purple));display:grid;place-items:center;color:#151018;font-weight:1000;font-size:24px;box-shadow:0 0 40px rgba(255,213,74,.2)}
+    .pack small{position:absolute;bottom:18px;font-size:8px;color:#bdaed4;letter-spacing:.12em}
+    .pack.opening{animation:packShake .65s ease}
+    @keyframes packShake{0%,100%{transform:rotate(-3deg)}20%{transform:rotate(7deg) scale(1.03)}40%{transform:rotate(-9deg) scale(1.05)}60%{transform:rotate(8deg) scale(1.08)}80%{transform:rotate(-5deg) scale(1.1)}}
+    .openPack{border:0;border-radius:14px;padding:13px 19px;background:linear-gradient(135deg,var(--yellow),var(--yellow2));color:#211700;font-size:10px;font-weight:1000;cursor:pointer}
+    .openPack:disabled{opacity:.4}
+    .odds{font-size:8px;color:var(--muted);margin-top:10px}
+
+    .reward{display:none;text-align:center;padding:14px 0 7px}
+    .reward.show{display:block;animation:pop .55s cubic-bezier(.18,.89,.32,1.28)}
+    @keyframes pop{from{opacity:0;transform:scale(.45)}to{opacity:1;transform:scale(1)}}
+    .rewardOrb{width:145px;height:145px;margin:0 auto 17px;border-radius:50%;display:grid;place-items:center;font-size:52px;background:radial-gradient(circle,rgba(255,255,255,.2),rgba(157,87,255,.08) 45%,transparent 70%);filter:drop-shadow(0 0 35px rgba(157,87,255,.45))}
+    .reward h3{font-size:27px;margin:0;letter-spacing:-.04em}.reward p{font-size:10px;color:var(--muted);margin:6px 0 0}
+
+    .mia{position:absolute;z-index:120;left:50%;top:50%;transform:translate(-50%,-50%) scale(.7);width:min(520px,92vw);border-radius:30px;padding:24px;text-align:center;display:none;pointer-events:auto}
+    .mia.show{display:block;animation:miaIn .55s cubic-bezier(.16,1,.3,1) forwards}
+    @keyframes miaIn{from{opacity:0;transform:translate(-50%,-50%) scale(.6) rotate(-3deg)}to{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)}}
+    .miaBadge{display:inline-block;padding:6px 10px;border-radius:999px;background:rgba(255,216,74,.11);border:1px solid rgba(255,216,74,.24);color:var(--yellow);font-size:8px;text-transform:uppercase;letter-spacing:.15em}
+    .mia h2{font-size:clamp(27px,5vw,46px);margin:13px 0 8px;letter-spacing:-.055em}
+    .mia p{font-size:11px;color:#c8bfd5;line-height:1.6;max-width:390px;margin:0 auto 18px}
+    .claim{border:0;border-radius:14px;padding:13px 20px;background:linear-gradient(135deg,var(--yellow),#ff9b4a);color:#251900;font-weight:1000;font-size:10px;cursor:pointer}
+
+    .toast{position:absolute;z-index:130;left:50%;top:145px;transform:translateX(-50%) translateY(-10px);padding:10px 14px;border-radius:13px;background:rgba(15,12,23,.9);border:1px solid var(--line);box-shadow:0 16px 50px rgba(0,0,0,.4);font-size:9px;opacity:0;pointer-events:none;transition:.25s}
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+    .splash{position:absolute;z-index:500;inset:0;background:#08060d;display:grid;place-items:center;transition:.75s cubic-bezier(.76,0,.24,1)}
+    .splash.hide{opacity:0;visibility:hidden;transform:scale(1.04)}
+    .splashInner{text-align:center}
+    .sLogo{width:82px;height:82px;border-radius:26px;margin:0 auto 18px;background:linear-gradient(135deg,var(--yellow),#ff9864 48%,var(--purple));display:grid;place-items:center;color:#151018;font-size:28px;font-weight:1000;box-shadow:0 0 70px rgba(157,87,255,.18)}
+    .splash h1{font-size:28px;margin:0;letter-spacing:-.045em}.splash p{font-size:9px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase}
+    .loadbar{width:180px;height:3px;border-radius:20px;background:rgba(255,255,255,.08);margin:20px auto 0;overflow:hidden}
+    .loadbar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--yellow));animation:load 1.25s ease forwards}
+    @keyframes load{to{width:100%}}
+
+    @media(max-width:930px){
+      .leftPanel{display:none}.rightPanel{width:210px;top:106px}.topbar{max-width:calc(100vw - 18px)}
+      .brandtext{display:none}.brand{padding-right:2px}.stat{min-width:92px}
+    }
+    @media(max-width:680px){
+      .hud{padding:8px}.topbar{top:max(8px,env(safe-area-inset-top));gap:4px;padding:5px;border-radius:18px}
+      .brand{display:none}.stat{min-width:82px;padding:6px 8px}.stat i{width:25px;height:25px}.stat .v{font-size:10px}
+      .rightPanel{display:none}.levelBox{top:70px;width:72vw}
+      .plantInfo{bottom:100px}.plantName{font-size:28px}.plantSub{font-size:9px}
+      .bottomNav{bottom:max(8px,env(safe-area-inset-bottom));gap:3px;padding:5px;border-radius:19px;width:calc(100vw - 12px);justify-content:center}
+      .navBtn{min-width:0;flex:1;height:46px}.seedBtn{min-width:88px;flex:1.35}
+      .tapHint{top:53%}.cards{grid-template-columns:repeat(2,1fr)}
+      .modal{padding:18px;border-radius:24px}.modalHeader h2{font-size:20px}
+    }
+  </style>
+</head>
+<body>
+<div id="game">
+  <div id="scene"></div>
+  <div class="vignette"></div><div class="grain"></div>
+
+  <div class="hud">
+    <div class="topbar glass">
+      <div class="brand">
+        <div class="brandmark">TP</div>
+        <div class="brandtext"><b>Tato, patrz!</b><span>GARDEN TYCOON</span></div>
+      </div>
+      <div class="stat coin"><i>●</i><div><div class="v" id="coins">0</div><div class="k">monety</div></div></div>
+      <div class="stat gem"><i>◆</i><div><div class="v" id="gems">12</div><div class="k">kryształy</div></div></div>
+      <div class="stat"><i>⚡</i><div><div class="v" id="income">+0/s</div><div class="k">dochód</div></div></div>
+    </div>
+
+    <div class="levelBox">
+      <div class="levelHead"><strong id="level">POZIOM 1</strong><span id="xpText">0 / 100 XP</span></div>
+      <div class="xpbar"><div class="xpfill" id="xpfill"></div></div>
+    </div>
+
+    <div class="leftPanel glass">
+      <div class="panelTitle"><b>Misje</b><span>DZISIAJ</span></div>
+      <div class="quest"><div class="questTop"><b>Dotknij roślinę</b><em id="q1t">0/25</em></div><div class="qbar"><div class="qfill" id="q1" style="width:0%"></div></div></div>
+      <div class="quest"><div class="questTop"><b>Zarób 2 500</b><em id="q2t">0/2500</em></div><div class="qbar"><div class="qfill" id="q2" style="width:0%"></div></div></div>
+      <div class="quest"><div class="questTop"><b>Otwórz seed drop</b><em id="q3t">0/1</em></div><div class="qbar"><div class="qfill" id="q3" style="width:0%"></div></div></div>
+    </div>
+
+    <div class="rightPanel glass">
+      <div class="panelTitle"><b>Ulepszenia</b><span>MOC OGRODU</span></div>
+      <div id="upgrades"></div>
+    </div>
+
+    <div class="tapHint" id="tapHint"><div>DOTKNIJ ROŚLINY</div><span>energia • monety • rozwój</span></div>
+
+    <div class="plantInfo">
+      <div class="rarity"><i class="dot" id="rarityDot"></i><span id="rarity">COMMON</span></div>
+      <h1 class="plantName" id="plantName">Nova Sprout</h1>
+      <div class="plantSub" id="plantSub">Etap 1/6 • następna forma za 100 XP</div>
+    </div>
+
+    <div class="bottomNav glass">
+      <button class="navBtn active" data-panel="garden"><span>✦</span><span>Ogród</span></button>
+      <button class="navBtn" data-panel="collection"><span>◈</span><span>Kolekcja</span></button>
+      <button class="navBtn seedBtn" data-panel="seeds"><span>⬡</span><span>SEED DROP</span></button>
+      <button class="navBtn" data-panel="genetics"><span>⌁</span><span>Genetyka</span></button>
+      <button class="navBtn" data-panel="stats"><span>⌁</span><span>Staty</span></button>
+    </div>
+  </div>
+
+  <div class="modalBack" id="modalBack">
+    <div class="modal glass" id="modal"></div>
+  </div>
+
+  <div class="mia glass" id="mia">
+    <span class="miaBadge">⚡ LOSOWY EVENT</span>
+    <h2>„Tato… patrz twoje kwiatki!”</h2>
+    <p>Mia zauważyła coś dziwnego. Roślina złapała chwilowy rezonans i przez 20 sekund produkuje <b>5× więcej monet</b>.</p>
+    <button class="claim" id="claimMia">BIORĘ BONUS ×5</button>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <div class="splash" id="splash">
+    <div class="splashInner">
+      <div class="sLogo">TP</div>
+      <h1>Tato, patrz twoje kwiatki!</h1>
+      <p>PREMIUM GARDEN TYCOON</p>
+      <div class="loadbar"><i></i></div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const $ = s => document.querySelector(s);
+const fmt = n => n >= 1e9 ? (n/1e9).toFixed(2)+'B' : n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : Math.floor(n).toString();
+
+const rarityData = {
+  Common:{color:'#72ff9d', mult:1, glow:0x35ff87},
+  Rare:{color:'#62e7ff', mult:1.6, glow:0x41dfff},
+  Epic:{color:'#b06cff', mult:2.6, glow:0x9b53ff},
+  Legendary:{color:'#ffd84a', mult:4.5, glow:0xffcc32},
+  Mythic:{color:'#ff6e9f', mult:8, glow:0xff4f8d},
+  Secret:{color:'#ffffff', mult:15, glow:0xffffff}
+};
+const seeds = [
+  {name:'Nova Sprout', rarity:'Common', icon:'🌱', chance:46},
+  {name:'Aqua Pulse', rarity:'Rare', icon:'💧', chance:28},
+  {name:'Violet Orbit', rarity:'Epic', icon:'🪐', chance:16},
+  {name:'Golden Crown', rarity:'Legendary', icon:'👑', chance:7},
+  {name:'Nebula Heart', rarity:'Mythic', icon:'💠', chance:2.5},
+  {name:'Zero Point', rarity:'Secret', icon:'✦', chance:.5}
+];
+const upgradeDefs = [
+  {id:'lamp', icon:'☀', name:'Quantum Lamp', desc:'+35% / poziom', base:180, scale:1.72},
+  {id:'water',icon:'◉',name:'Hydro Core',desc:'+2 monety / sek.',base:320,scale:1.78},
+  {id:'bot',icon:'⌾',name:'Nano Bot',desc:'+1 auto-tap / sek.',base:760,scale:1.84},
+  {id:'lab',icon:'⌬',name:'Gene Lab',desc:'+8% do wszystkich zysków',base:1450,scale:1.9}
+];
+
+let state = {
+  coins: 0, gems: 12, xp: 0, level:1, totalCoins:0, taps:0, packs:0,
+  currentSeed:0, collection:[0], upgrades:{lamp:0,water:0,bot:0,lab:0},
+  boostUntil:0, stage:1, rebirths:0
+};
+try{
+  const saved = JSON.parse(localStorage.getItem('tptk_save_v2'));
+  if(saved) state = {...state,...saved,upgrades:{...state.upgrades,...(saved.upgrades||{})}};
+}catch(e){}
+
+const save = () => localStorage.setItem('tptk_save_v2',JSON.stringify(state));
+setInterval(save,5000);
+addEventListener('beforeunload',save);
+
+let audioCtx;
+function tone(freq=440,dur=.08,type='sine',vol=.035){
+  try{
+    audioCtx ||= new (window.AudioContext||window.webkitAudioContext)();
+    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
+    o.type=type;o.frequency.value=freq;g.gain.value=vol;
+    o.connect(g);g.connect(audioCtx.destination);o.start();
+    g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+dur);
+    o.stop(audioCtx.currentTime+dur);
+  }catch(e){}
+}
+function chord(){
+  [260,390,520,780].forEach((f,i)=>setTimeout(()=>tone(f,.16,'triangle',.025),i*45));
+}
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x09070f, .09);
+const camera = new THREE.PerspectiveCamera(42, innerWidth/innerHeight, .1, 100);
+camera.position.set(0,2.3,7.6);
+
+const renderer = new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.8));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.15;
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+$('#scene').appendChild(renderer.domElement);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.72,.65,.82);
+composer.addPass(bloom);
+
+const hemi = new THREE.HemisphereLight(0x9f86ff,0x151018,1.35); scene.add(hemi);
+const key = new THREE.SpotLight(0xffd65a,32,18,Math.PI/5,.45,1.2); key.position.set(4,7,5); key.castShadow=true; scene.add(key);
+const rim = new THREE.PointLight(0x8c4fff,22,12,1.5); rim.position.set(-4,3,-2); scene.add(rim);
+const fill = new THREE.PointLight(0x55d9ff,9,10,2); fill.position.set(3,1,-3); scene.add(fill);
+
+const floor = new THREE.Mesh(new THREE.CircleGeometry(7,96),new THREE.MeshStandardMaterial({color:0x0d0a13,roughness:.72,metalness:.18}));
+floor.rotation.x=-Math.PI/2;floor.position.y=-1.44;floor.receiveShadow=true;scene.add(floor);
+const ring = new THREE.Mesh(new THREE.RingGeometry(1.55,1.58,128),new THREE.MeshBasicMaterial({color:0x7e44e4,transparent:true,opacity:.32,side:THREE.DoubleSide}));
+ring.rotation.x=-Math.PI/2;ring.position.y=-1.425;scene.add(ring);
+const ring2 = ring.clone(); ring2.scale.setScalar(1.55); ring2.material=ring.material.clone(); ring2.material.opacity=.12; scene.add(ring2);
+
+const pedestal = new THREE.Group(); scene.add(pedestal);
+const baseMat = new THREE.MeshPhysicalMaterial({color:0x191223,metalness:.55,roughness:.26,clearcoat:1,clearcoatRoughness:.2});
+const base = new THREE.Mesh(new THREE.CylinderGeometry(1.22,1.45,.38,64),baseMat);base.position.y=-1.24;base.castShadow=true;base.receiveShadow=true;pedestal.add(base);
+const baseGlow = new THREE.Mesh(new THREE.TorusGeometry(1.25,.025,12,100),new THREE.MeshBasicMaterial({color:0x9a50ff,transparent:true,opacity:.55}));
+baseGlow.rotation.x=Math.PI/2;baseGlow.position.y=-1.03;pedestal.add(baseGlow);
+
+const pot = new THREE.Group(); pedestal.add(pot);
+const potBody = new THREE.Mesh(new THREE.CylinderGeometry(.72,.55,1.05,48,1,true),new THREE.MeshPhysicalMaterial({color:0x2a2038,metalness:.38,roughness:.28,clearcoat:1,clearcoatRoughness:.18}));
+potBody.position.y=-.58; potBody.castShadow=true; pot.add(potBody);
+const potRim = new THREE.Mesh(new THREE.TorusGeometry(.72,.09,16,64),new THREE.MeshPhysicalMaterial({color:0x36284a,metalness:.45,roughness:.25}));
+potRim.rotation.x=Math.PI/2;potRim.position.y=-.05;pot.add(potRim);
+const soil = new THREE.Mesh(new THREE.CylinderGeometry(.66,.66,.07,48),new THREE.MeshStandardMaterial({color:0x15100c,roughness:1}));
+soil.position.y=-.08;pot.add(soil);
+
+const plant = new THREE.Group(); pedestal.add(plant);
+plant.position.y=-.03;
+let leafMeshes=[], stemMeshes=[];
+
+function clearPlant(){
+  leafMeshes.forEach(m=>{plant.remove(m);m.geometry.dispose();m.material.dispose()});
+  stemMeshes.forEach(m=>{plant.remove(m);m.geometry.dispose();m.material.dispose()});
+  leafMeshes=[];stemMeshes=[];
+}
+function branchBetween(a,b,r=.035,mat){
+  const d=new THREE.Vector3().subVectors(b,a);const len=d.length();
+  const geo=new THREE.CylinderGeometry(r,r*.88,len,10);
+  const m=new THREE.Mesh(geo,mat);m.position.copy(a).add(b).multiplyScalar(.5);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());
+  m.castShadow=true;plant.add(m);stemMeshes.push(m);return m;
+}
+function leaf(pos,scale,rot,mat){
+  const geo=new THREE.SphereGeometry(1,18,12);
+  const m=new THREE.Mesh(geo,mat.clone());
+  m.position.copy(pos);m.scale.set(scale*.48,scale*.11,scale);
+  m.rotation.set(rot.x,rot.y,rot.z);m.castShadow=true;
+  m.userData.baseScale=m.scale.clone();m.userData.phase=Math.random()*10;
+  plant.add(m);leafMeshes.push(m);return m;
+}
+function rebuildPlant(){
+  clearPlant();
+  const seed=seeds[state.currentSeed], rd=rarityData[seed.rarity];
+  const stage=Math.max(1,Math.min(6,state.stage));
+  const hue=new THREE.Color(rd.glow);
+  const stemMat=new THREE.MeshStandardMaterial({color:hue.clone().multiplyScalar(.38),roughness:.55,metalness:.05});
+  const leafMat=new THREE.MeshPhysicalMaterial({color:hue.clone().lerp(new THREE.Color(0x3cff7b),seed.rarity==='Common'?.7:.25),emissive:hue,emissiveIntensity:seed.rarity==='Common'?.045:.12,roughness:.42,metalness:.08,clearcoat:.55,clearcoatRoughness:.32});
+  const h=.75+stage*.37;
+  branchBetween(new THREE.Vector3(0,0,0),new THREE.Vector3(0,h,0),.05+stage*.004,stemMat);
+  const tiers=1+stage;
+  for(let i=1;i<=tiers;i++){
+    const y=.27+i*(h-.22)/(tiers+1), side=i%2?1:-1;
+    const len=.33+stage*.045+(i%3)*.035;
+    const endA=new THREE.Vector3(len,y+.06,(i%2)*.12-.05);
+    const endB=new THREE.Vector3(-len*.92,y-.01,-(i%2)*.1);
+    branchBetween(new THREE.Vector3(0,y,0),endA,.018+stage*.002,stemMat);
+    branchBetween(new THREE.Vector3(0,y,0),endB,.018+stage*.002,stemMat);
+    leaf(endA.clone().add(new THREE.Vector3(.12,.03,.02)),.31+stage*.028,new THREE.Euler(.18,.18,-.68),leafMat);
+    leaf(endB.clone().add(new THREE.Vector3(-.12,.03,-.02)),.31+stage*.028,new THREE.Euler(-.16,-.22,.68),leafMat);
+    if(stage>=3 && i%2===0){
+      leaf(new THREE.Vector3(.05,y+.08,.27),.26+stage*.02,new THREE.Euler(.65,0,.1),leafMat);
+      leaf(new THREE.Vector3(-.05,y+.05,-.27),.26+stage*.02,new THREE.Euler(-.65,0,-.1),leafMat);
+    }
+  }
+  leaf(new THREE.Vector3(0,h+.13,0),.36+stage*.03,new THREE.Euler(.05,0,0),leafMat);
+  plant.scale.setScalar(.88);
+}
+rebuildPlant();
+
+const dustGeo=new THREE.BufferGeometry();
+const dustN=420, pos=new Float32Array(dustN*3);
+for(let i=0;i<dustN;i++){pos[i*3]=(Math.random()-.5)*18;pos[i*3+1]=Math.random()*10-3;pos[i*3+2]=(Math.random()-.5)*13}
+dustGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));
+const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({color:0xb990ff,size:.025,transparent:true,opacity:.5,depthWrite:false}));
+scene.add(dust);
+
+const burstGroup=new THREE.Group();scene.add(burstGroup);
+function burst(color=0xffd84a,count=24){
+  for(let i=0;i<count;i++){
+    const m=new THREE.Mesh(new THREE.SphereGeometry(.025+Math.random()*.025,6,6),new THREE.MeshBasicMaterial({color,transparent:true}));
+    m.position.set((Math.random()-.5)*.3,.7+Math.random()*1.5,(Math.random()-.5)*.3);
+    m.userData.vel=new THREE.Vector3((Math.random()-.5)*.045,.035+Math.random()*.05,(Math.random()-.5)*.045);
+    m.userData.life=1;burstGroup.add(m);
+  }
+}
+
+let pointer={x:0,y:0}, targetCamX=0,targetCamY=2.3;
+addEventListener('pointermove',e=>{pointer.x=e.clientX/innerWidth*2-1;pointer.y=e.clientY/innerHeight*2-1;targetCamX=pointer.x*.22;targetCamY=2.3-pointer.y*.12});
+
+let plantKick=0;
+renderer.domElement.addEventListener('pointerdown',e=>{
+  const rect=renderer.domElement.getBoundingClientRect();
+  const mouse=new THREE.Vector2((e.clientX/rect.width)*2-1,-(e.clientY/rect.height)*2+1);
+  const ray=new THREE.Raycaster();ray.setFromCamera(mouse,camera);
+  if(ray.intersectObjects([...leafMeshes,...stemMeshes,potBody],true).length) tapPlant(e.clientX,e.clientY);
+});
+
+function seedMult(){return rarityData[seeds[state.currentSeed].rarity].mult}
+function incomePerSec(){
+  const u=state.upgrades;
+  const base=u.water*2 + u.bot*(1.25+u.lamp*.35);
+  return base*(1+u.lamp*.35)*(1+u.lab*.08)*seedMult()*(1+state.rebirths*.18)*(Date.now()<state.boostUntil?5:1);
+}
+function tapValue(){
+  const u=state.upgrades;
+  return (7+state.level*1.3)*(1+u.lamp*.35)*(1+u.lab*.08)*seedMult()*(1+state.rebirths*.18)*(Date.now()<state.boostUntil?5:1);
+}
+function xpNeed(){return 100+Math.floor((state.level-1)*72*Math.pow(1.055,state.level-1))}
+function addCoins(n){
+  state.coins+=n;state.totalCoins+=n;
+}
+function addXp(n){
+  state.xp+=n;
+  while(state.xp>=xpNeed()){
+    state.xp-=xpNeed();state.level++;state.gems+=2;
+    const old=state.stage;state.stage=Math.min(6,1+Math.floor((state.level-1)/2));
+    chord();burst(0xffd84a,48);toast('POZIOM '+state.level+' • +2 ◆');
+    if(old!==state.stage) rebuildPlant();
+  }
+}
+function tapPlant(x=innerWidth/2,y=innerHeight/2){
+  const val=tapValue();addCoins(val);addXp(6);state.taps++;
+  plantKick=Math.min(1,plantKick+.48);
+  burst(rarityData[seeds[state.currentSeed].rarity].glow,8);
+  floatText(x,y,'+'+fmt(val));
+  tone(360+Math.random()*120,.06,'triangle',.025);
+  $('#tapHint').style.opacity=Math.max(0,.85-state.taps*.09);
+  if(state.taps>0 && state.taps%37===0 && Math.random()<.5 && Date.now()>state.boostUntil) triggerMia();
+  updateUI();
+}
+function floatText(x,y,t){
+  const d=document.createElement('div');d.className='floatText';d.textContent=t;d.style.left=x+'px';d.style.top=y+'px';document.body.appendChild(d);setTimeout(()=>d.remove(),900);
+}
+let toastTimer;
+function toast(t){
+  const el=$('#toast');el.textContent=t;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),1800);
+}
+
+function upgradeCost(def){return Math.floor(def.base*Math.pow(def.scale,state.upgrades[def.id]))}
+function renderUpgrades(){
+  const root=$('#upgrades');root.innerHTML='';
+  upgradeDefs.forEach(d=>{
+    const cost=upgradeCost(d),lv=state.upgrades[d.id];
+    const row=document.createElement('div');row.className='upgrade';
+    row.innerHTML=`<div class="upIcon">${d.icon}</div><div><div class="upName">${d.name}</div><div class="upDesc">${d.desc}</div><div class="lvl">POZIOM ${lv}</div></div><button class="buy">${fmt(cost)} ●</button>`;
+    const b=row.querySelector('button');b.disabled=state.coins<cost;
+    b.onclick=()=>{if(state.coins<cost)return;state.coins-=cost;state.upgrades[d.id]++;tone(520,.08,'triangle',.03);burst(0xffd84a,12);renderUpgrades();updateUI();save()};
+    root.appendChild(row);
+  });
+}
+function updateUI(){
+  $('#coins').textContent=fmt(state.coins);$('#gems').textContent=fmt(state.gems);$('#income').textContent='+'+fmt(incomePerSec())+'/s';
+  $('#level').textContent='POZIOM '+state.level;$('#xpText').textContent=Math.floor(state.xp)+' / '+xpNeed()+' XP';$('#xpfill').style.width=Math.min(100,state.xp/xpNeed()*100)+'%';
+  const seed=seeds[state.currentSeed],rd=rarityData[seed.rarity];
+  $('#rarity').textContent=seed.rarity.toUpperCase();$('#rarityDot').style.background=rd.color;$('#rarityDot').style.color=rd.color;
+  $('#plantName').textContent=seed.name;$('#plantSub').textContent=`Etap ${state.stage}/6 • mnożnik ${rd.mult.toFixed(1)}×`;
+  const q1=Math.min(25,state.taps),q2=Math.min(2500,state.totalCoins),q3=Math.min(1,state.packs);
+  $('#q1').style.width=q1/25*100+'%';$('#q1t').textContent=q1+'/25';
+  $('#q2').style.width=q2/2500*100+'%';$('#q2t').textContent=fmt(q2)+'/2.5K';
+  $('#q3').style.width=q3*100+'%';$('#q3t').textContent=q3+'/1';
+  document.documentElement.style.setProperty('--seedColor',rd.color);
+  renderUpgrades();
+}
+
+function openModal(type){
+  const back=$('#modalBack'),m=$('#modal');back.classList.add('open');
+  if(type==='seeds') renderSeeds(m);
+  if(type==='collection') renderCollection(m);
+  if(type==='genetics') renderGenetics(m);
+  if(type==='stats') renderStats(m);
+}
+function modalHeader(title,sub){return `<div class="modalHeader"><div><h2>${title}</h2><p>${sub}</p></div><button class="close">✕</button></div>`}
+function bindClose(){document.querySelector('.close').onclick=()=>$('#modalBack').classList.remove('open')}
+$('#modalBack').addEventListener('pointerdown',e=>{if(e.target===$('#modalBack'))$('#modalBack').classList.remove('open')});
+document.querySelectorAll('.navBtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');const p=b.dataset.panel;if(p!=='garden')openModal(p)});
+
+function rollSeed(){
+  let r=Math.random()*100,acc=0;
+  for(let i=0;i<seeds.length;i++){acc+=seeds[i].chance;if(r<=acc)return i}
+  return 0;
+}
+function renderSeeds(m){
+  const cost=250+state.packs*35;
+  m.innerHTML=modalHeader('Seed Drop','Otwórz paczkę i poluj na coraz rzadsze mutacje.')+`
+  <div class="packWrap" id="packWrap"><div class="pack" id="pack"><div class="logo">✦</div><small>6 TYPÓW • 1 SECRET</small></div>
+  <button class="openPack" id="openPack" ${state.coins<cost?'disabled':''}>OTWÓRZ • ${fmt(cost)} ●</button>
+  <div class="odds">Common 46% • Rare 28% • Epic 16% • Legendary 7% • Mythic 2.5% • Secret 0.5%</div></div>
+  <div class="reward" id="reward"></div>`;
+  bindClose();
+  $('#openPack').onclick=()=>{
+    if(state.coins<cost)return;state.coins-=cost;state.packs++;const btn=$('#openPack');btn.disabled=true;$('#pack').classList.add('opening');
+    tone(180,.2,'sawtooth',.018);setTimeout(()=>tone(280,.18,'triangle',.03),220);setTimeout(()=>tone(520,.22,'triangle',.035),450);
+    setTimeout(()=>{
+      const id=rollSeed(),seed=seeds[id],rd=rarityData[seed.rarity];
+      if(!state.collection.includes(id))state.collection.push(id);
+      state.currentSeed=id;state.stage=Math.max(1,state.stage);rebuildPlant();burst(rd.glow,65);chord();
+      $('#packWrap').style.display='none';const rw=$('#reward');rw.classList.add('show');rw.style.display='block';
+      rw.innerHTML=`<div class="rewardOrb" style="color:${rd.color}">${seed.icon}</div><div style="font-size:9px;color:${rd.color};font-weight:900;letter-spacing:.16em">${seed.rarity.toUpperCase()}</div><h3>${seed.name}</h3><p>Mnożnik produkcji ${rd.mult.toFixed(1)}× • dodano do kolekcji</p><button class="openPack" style="margin-top:16px" id="equip">USTAW W OGRODZIE</button>`;
+      $('#equip').onclick=()=>{$('#modalBack').classList.remove('open');updateUI();save()};
+      updateUI();save();
+    },700);
+  }
+}
+function renderCollection(m){
+  m.innerHTML=modalHeader('Kolekcja','Odkrywaj wszystkie nasiona. Najrzadsze zmieniają wygląd i mnożnik ogrodu.')+`<div class="cards">${seeds.map((s,i)=>{
+    const unlocked=state.collection.includes(i),rd=rarityData[s.rarity];
+    return `<div class="card ${unlocked?'':'locked'}" data-id="${i}"><div style="color:${rd.color};font-size:8px;letter-spacing:.12em">${s.rarity.toUpperCase()}</div><div class="big">${s.icon}</div><b>${unlocked?s.name:'???'}</b><p>${unlocked?rd.mult.toFixed(1)+'× produkcji':'Otwórz Seed Drop, aby odkryć.'}</p></div>`
+  }).join('')}</div>`;
+  bindClose();
+  m.querySelectorAll('.card:not(.locked)').forEach(c=>c.onclick=()=>{state.currentSeed=+c.dataset.id;rebuildPlant();updateUI();save();$('#modalBack').classList.remove('open');toast('USTAWIONO: '+seeds[state.currentSeed].name)});
+}
+function renderGenetics(m){
+  const can=state.level>=10,bonus=(state.rebirths+1)*18;
+  m.innerHTML=modalHeader('Genetyka','End-game: resetujesz progres ekonomii, ale zachowujesz kolekcję i dostajesz stałą przewagę.')+`
+  <div style="padding:26px 2px 6px;text-align:center"><div style="font-size:58px">🧬</div><h3 style="font-size:24px;margin:10px 0 5px">Rebirth #${state.rebirths}</h3><p style="font-size:10px;color:var(--muted);line-height:1.6">Następny rebirth daje stałe <b style="color:var(--yellow)">+${bonus}%</b> do wszystkich zysków.<br>Wymagany poziom 10.</p>
+  <button class="openPack" id="rebirth" style="margin-top:12px" ${can?'':'disabled'}>RESTARTUJ OGRÓD</button></div>`;
+  bindClose();
+  $('#rebirth').onclick=()=>{if(!can)return;state.rebirths++;state.coins=0;state.xp=0;state.level=1;state.stage=1;state.upgrades={lamp:0,water:0,bot:0,lab:0};rebuildPlant();updateUI();save();$('#modalBack').classList.remove('open');burst(0xffffff,90);toast('GENETYKA +18% NA STAŁE')};
+}
+function renderStats(m){
+  m.innerHTML=modalHeader('Statystyki','Twój ogród w liczbach.')+`<div class="cards">
+  <div class="card"><div class="big">●</div><b>${fmt(state.totalCoins)}</b><p>monet zarobionych łącznie</p></div>
+  <div class="card"><div class="big">☝</div><b>${fmt(state.taps)}</b><p>dotknięć rośliny</p></div>
+  <div class="card"><div class="big">⬡</div><b>${state.packs}</b><p>otwartych paczek</p></div>
+  <div class="card"><div class="big">◈</div><b>${state.collection.length}/6</b><p>odkrytych nasion</p></div>
+  <div class="card"><div class="big">🧬</div><b>${state.rebirths}</b><p>rebirthów genetyki</p></div>
+  <div class="card"><div class="big">⚡</div><b>${fmt(incomePerSec())}/s</b><p>aktualny dochód</p></div></div>`;
+  bindClose();
+}
+function triggerMia(){
+  $('#mia').classList.add('show');tone(740,.18,'triangle',.035);setTimeout(()=>tone(980,.18,'triangle',.03),120);
+}
+$('#claimMia').onclick=()=>{state.boostUntil=Date.now()+20000;$('#mia').classList.remove('show');burst(0xffd84a,80);toast('BOOST ×5 • 20 SEKUND');updateUI()};
+
+setInterval(()=>{
+  const inc=incomePerSec()/10;addCoins(inc);if(state.upgrades.bot>0)addXp(state.upgrades.bot*.015);
+  updateUI();
+},100);
+
+const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);const t=clock.getElapsedTime(),dt=Math.min(clock.getDelta?.()||.016,.03);
+  dust.rotation.y=t*.008;dust.position.y=Math.sin(t*.17)*.08;
+  plant.rotation.y=Math.sin(t*.32)*.025;
+  leafMeshes.forEach((l,i)=>{const pulse=1+Math.sin(t*1.1+l.userData.phase)*.018;l.scale.copy(l.userData.baseScale).multiplyScalar(pulse);l.rotation.z+=Math.sin(t*.9+i)*.00015});
+  plantKick*=.88;plant.scale.setScalar(.88+plantKick*.045);plant.rotation.z=Math.sin(t*.4)*.008+plantKick*.025;
+  ring.material.opacity=.25+Math.sin(t*1.5)*.08;ring.rotation.z=t*.05;ring2.rotation.z=-t*.035;
+  baseGlow.material.opacity=.42+Math.sin(t*2)*.1;
+  camera.position.x+=(targetCamX-camera.position.x)*.035;camera.position.y+=(targetCamY-camera.position.y)*.035;camera.lookAt(0,.5,0);
+  for(let i=burstGroup.children.length-1;i>=0;i--){const p=burstGroup.children[i];p.position.add(p.userData.vel);p.userData.vel.y-=.0012;p.userData.life-=.025;p.material.opacity=p.userData.life;if(p.userData.life<=0){burstGroup.remove(p);p.geometry.dispose();p.material.dispose()}}
+  composer.render();
+}
+animate();
+
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight)});
+
+setTimeout(()=>$('#splash').classList.add('hide'),1450);
+updateUI();
+if(state.taps===0)setTimeout(()=>toast('DOTKNIJ ROŚLINY, ŻEBY ZACZĄĆ'),1900);
+</script>
+</body>
+</html>
