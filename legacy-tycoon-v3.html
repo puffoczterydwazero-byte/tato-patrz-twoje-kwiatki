@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#08060d">
+<title>Tato, patrz twoje kwiatki! — Garden Tycoon V3</title>
+<style>
+:root{
+  --bg:#07060b;--panel:rgba(18,15,27,.66);--panel2:rgba(31,24,45,.78);
+  --line:rgba(255,255,255,.09);--txt:#f8f6ff;--muted:#aaa1b9;
+  --yellow:#ffd84a;--yellow2:#ffb422;--purple:#9b5cff;--cyan:#66e8ff;
+  --green:#76ff9d;--danger:#ff658d;--shadow:0 28px 90px rgba(0,0,0,.48);
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--txt);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button{font:inherit;color:inherit}
+#game{position:fixed;inset:0;overflow:hidden;background:
+radial-gradient(circle at 50% 28%,rgba(133,69,235,.13),transparent 34%),
+radial-gradient(circle at 50% 100%,rgba(255,206,46,.07),transparent 36%),#07060b}
+#scene{position:absolute;inset:0;z-index:0}
+#scene canvas{display:block;width:100%;height:100%;touch-action:none}
+.fx{position:absolute;inset:0;pointer-events:none}
+.vignette{z-index:2;background:
+linear-gradient(to bottom,rgba(5,4,8,.68),transparent 18%,transparent 74%,rgba(5,4,8,.92)),
+radial-gradient(circle at 50% 45%,transparent 36%,rgba(0,0,0,.58) 100%)}
+.scan{z-index:3;opacity:.05;background:repeating-linear-gradient(to bottom,transparent 0 3px,rgba(255,255,255,.045) 4px)}
+.grain{z-index:4;opacity:.035;inset:-50%;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.9'/%3E%3C/svg%3E");animation:grain .32s steps(2) infinite}
+@keyframes grain{0%{transform:translate(0,0)}25%{transform:translate(3%,-2%)}50%{transform:translate(-2%,3%)}75%{transform:translate(2%,1%)}100%{transform:translate(-3%,-1%)}}
+.glass{background:linear-gradient(180deg,rgba(34,27,48,.72),rgba(14,11,21,.66));border:1px solid var(--line);box-shadow:var(--shadow);backdrop-filter:blur(19px) saturate(145%);-webkit-backdrop-filter:blur(19px) saturate(145%)}
+.hud{position:absolute;inset:0;z-index:20;pointer-events:none;padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+.topbar{position:absolute;left:50%;top:max(12px,env(safe-area-inset-top));transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:7px;border-radius:22px;pointer-events:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 4px 4px}
+.brandmark{width:36px;height:36px;border-radius:13px;display:grid;place-items:center;background:linear-gradient(135deg,var(--yellow),#ff9760 48%,var(--purple));color:#171018;font-weight:1000;box-shadow:0 0 36px rgba(255,215,74,.22)}
+.brandtext{line-height:1}.brandtext b{display:block;font-size:11px;letter-spacing:.05em}.brandtext span{display:block;font-size:8px;color:var(--muted);letter-spacing:.16em;margin-top:5px}
+.stat{min-width:93px;display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:15px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.055)}
+.stat i{width:27px;height:27px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.06);font-style:normal}
+.stat .v{font-size:11px;font-weight:900;line-height:1}.stat .k{font-size:7px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;margin-top:4px}
+.levelBox{position:absolute;left:50%;top:82px;transform:translateX(-50%);width:min(360px,calc(100vw - 34px));text-align:center}
+.levelHead{display:flex;justify-content:center;gap:8px;align-items:center;margin-bottom:7px;text-shadow:0 2px 12px #000}
+.levelHead b{font-size:10px;letter-spacing:.16em}.levelHead span{font-size:9px;color:var(--muted)}
+.xpbar{height:5px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+.xpfill{height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,var(--purple),var(--yellow));box-shadow:0 0 20px rgba(255,216,74,.52);transition:width .28s ease}
+.roomBadge{position:absolute;left:50%;top:108px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;padding:7px 11px;border-radius:999px;pointer-events:none;white-space:nowrap}
+.roomBadge span{font-size:10px;color:var(--yellow)}.roomBadge b{font-size:8px;letter-spacing:.13em}.roomBadge em{font-style:normal;font-size:7px;color:var(--muted);letter-spacing:.08em}
+.side{position:absolute;top:112px;width:244px;border-radius:24px;padding:14px;pointer-events:auto}
+.left{left:17px}.right{right:17px}
+.panelTitle{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.panelTitle b{font-size:10px;text-transform:uppercase;letter-spacing:.14em}.panelTitle span{font-size:8px;color:var(--muted)}
+.quest,.upgrade{border:1px solid rgba(255,255,255,.055);background:rgba(255,255,255,.03);border-radius:15px}
+.quest{padding:10px;margin-top:7px}.questTop{display:flex;justify-content:space-between;gap:8px;font-size:9px}.questTop em{font-style:normal;color:var(--yellow)}
+.qbar{height:4px;background:rgba(255,255,255,.07);border-radius:999px;margin-top:7px;overflow:hidden}.qfill{height:100%;background:linear-gradient(90deg,var(--purple),var(--yellow));transition:.3s}
+.upgrade{display:grid;grid-template-columns:36px 1fr auto;gap:9px;align-items:center;padding:8px;margin-top:7px;transition:.18s}
+.upgrade:hover{transform:translateY(-1px);background:rgba(255,255,255,.05)}
+.upIcon{width:36px;height:36px;border-radius:11px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,216,74,.11),rgba(155,92,255,.17));font-size:16px}
+.upName{font-size:9px;font-weight:900}.upDesc,.lvl{font-size:7px;color:var(--muted);margin-top:2px}
+.buy{border:0;border-radius:10px;padding:8px 8px;background:linear-gradient(135deg,var(--yellow),var(--yellow2));color:#251b00;font-size:8px;font-weight:1000;cursor:pointer;transition:.16s}.buy:active{transform:scale(.94)}.buy:disabled{opacity:.34;filter:grayscale(1)}
+.rewardDock{position:absolute;left:18px;bottom:112px;width:190px;padding:10px 11px;border-radius:18px;pointer-events:auto;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.2s}
+.rewardDock:hover{transform:translateY(-2px)}
+.rewardIcon{width:41px;height:41px;border-radius:13px;display:grid;place-items:center;background:radial-gradient(circle at 30% 20%,#fff6aa,var(--yellow) 38%,#a75aff 100%);color:#241600;font-size:18px;box-shadow:0 0 28px rgba(255,216,74,.2)}
+.rewardDock b{display:block;font-size:9px}.rewardDock span{display:block;font-size:8px;color:var(--muted);margin-top:4px}.rewardDock.ready{border-color:rgba(255,216,74,.42);box-shadow:0 0 50px rgba(255,216,74,.13)}
+.combo{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) scale(.86);opacity:0;transition:.15s;pointer-events:none;text-align:center;text-shadow:0 4px 18px #000}
+.combo.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+.combo b{font-size:34px;font-weight:1000;letter-spacing:-.06em}.combo span{display:block;font-size:8px;color:var(--yellow);letter-spacing:.16em;text-transform:uppercase}
+.tapHint{position:absolute;left:50%;top:55%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;transition:.3s;text-shadow:0 3px 16px #000}
+.tapHint b{font-size:9px;letter-spacing:.2em}.tapHint span{display:block;font-size:8px;color:var(--muted);margin-top:5px}
+.plantInfo{position:absolute;left:50%;bottom:118px;transform:translateX(-50%);width:min(470px,90vw);text-align:center;pointer-events:none;text-shadow:0 4px 18px #000}
+.rarity{display:inline-flex;align-items:center;gap:7px;padding:6px 10px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(9,7,14,.48);font-size:8px;letter-spacing:.16em}
+.rarity i{width:6px;height:6px;border-radius:50%;box-shadow:0 0 14px currentColor}
+.plantName{margin:8px 0 0;font-size:clamp(25px,3.4vw,44px);font-weight:1000;letter-spacing:-.05em}
+.plantSub{font-size:9px;color:#c9c1d5;margin-top:4px}
+.bottomNav{position:absolute;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:7px;border-radius:21px;pointer-events:auto}
+.navBtn{min-width:73px;height:47px;border:1px solid transparent;border-radius:14px;background:transparent;color:#b9afc8;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;transition:.18s}
+.navBtn span:first-child{font-size:15px}.navBtn span:last-child{font-size:7px;text-transform:uppercase;letter-spacing:.1em}
+.navBtn:hover,.navBtn.active{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.07);color:#fff}
+.seedBtn{min-width:106px;background:linear-gradient(135deg,var(--yellow),#ffad32)!important;color:#241900!important;border:none!important;box-shadow:0 10px 30px rgba(255,196,45,.15)}
+.floatText{position:fixed;z-index:70;pointer-events:none;font-size:14px;font-weight:1000;color:var(--yellow);text-shadow:0 3px 14px rgba(0,0,0,.9);animation:floatUp .82s ease-out forwards}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,0) scale(.72)}18%{opacity:1;transform:translate(-50%,-8px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-70px) scale(.92)}}
+.modalBack{position:absolute;inset:0;z-index:120;background:rgba(4,3,8,.76);backdrop-filter:blur(17px);display:none;align-items:center;justify-content:center;padding:16px;pointer-events:auto}
+.modalBack.open{display:flex;animation:fade .18s ease}@keyframes fade{from{opacity:0}to{opacity:1}}
+.modal{width:min(570px,96vw);max-height:86vh;overflow:auto;border-radius:30px;padding:21px;position:relative}
+.modalHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.modalHeader h2{font-size:23px;margin:0;letter-spacing:-.04em}.modalHeader p{font-size:9px;line-height:1.55;color:var(--muted);margin:6px 0 0}.close{width:36px;height:36px;border-radius:12px;border:1px solid var(--line);background:rgba(255,255,255,.05);cursor:pointer}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:16px}.card{min-height:120px;border:1px solid rgba(255,255,255,.065);border-radius:18px;background:rgba(255,255,255,.035);padding:13px;cursor:pointer}.card.locked{filter:saturate(.2);opacity:.42;cursor:default}.card .big{font-size:29px;margin:12px 0 5px}.card b{font-size:9px}.card p{font-size:8px;color:var(--muted);line-height:1.5;margin:5px 0 0}
+.openPack,.claim{border:0;border-radius:14px;padding:13px 18px;background:linear-gradient(135deg,var(--yellow),var(--yellow2));color:#211700;font-size:9px;font-weight:1000;cursor:pointer}.openPack:disabled{opacity:.35}
+.packWrap{text-align:center;padding:18px 0 3px}.pack{width:160px;height:202px;margin:0 auto 18px;border-radius:28px;position:relative;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,255,255,.18),transparent 34%),linear-gradient(135deg,#301c50,#120d1f 55%,#45246c);border:1px solid rgba(255,255,255,.18);box-shadow:0 30px 80px rgba(0,0,0,.55),0 0 60px rgba(157,87,255,.19);transform:rotate(-3deg)}
+.pack:before{content:"SEED DROP";position:absolute;top:17px;font-size:8px;letter-spacing:.23em;color:#ddceff}.pack:after{content:"V2 GENETICS";position:absolute;bottom:17px;font-size:7px;letter-spacing:.18em;color:#a99abc}
+.packLogo{width:74px;height:74px;border-radius:24px;display:grid;place-items:center;background:linear-gradient(135deg,var(--yellow),#ff925f 48%,var(--purple));color:#191018;font-size:26px;font-weight:1000;box-shadow:0 0 45px rgba(255,215,74,.2)}
+.pack.opening{animation:shake .68s ease}@keyframes shake{0%,100%{transform:rotate(-3deg)}20%{transform:rotate(8deg) scale(1.03)}40%{transform:rotate(-10deg) scale(1.06)}60%{transform:rotate(9deg) scale(1.08)}82%{transform:rotate(-5deg) scale(1.12)}}
+.odds{font-size:7px;color:var(--muted);margin-top:10px}
+.reward{display:none;text-align:center;padding:10px 0}.reward.show{display:block;animation:pop .5s cubic-bezier(.18,.89,.32,1.28)}@keyframes pop{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+.rewardOrb{width:150px;height:150px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;font-size:54px;background:radial-gradient(circle,rgba(255,255,255,.23),rgba(156,85,255,.09) 45%,transparent 70%);filter:drop-shadow(0 0 42px rgba(157,87,255,.42))}
+.reward h3{font-size:28px;margin:2px 0;letter-spacing:-.045em}.reward p{font-size:9px;color:var(--muted)}
+.mapGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:17px}
+.zone{min-height:156px;border-radius:20px;border:1px solid rgba(255,255,255,.07);background:linear-gradient(145deg,rgba(255,255,255,.055),rgba(255,255,255,.018));padding:14px;position:relative;overflow:hidden}
+.zone:before{content:"";position:absolute;width:120px;height:120px;border-radius:50%;right:-45px;top:-45px;background:var(--zone);filter:blur(55px);opacity:.2}
+.zoneTop{display:flex;justify-content:space-between;align-items:center;position:relative}.zoneIcon{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;background:rgba(255,255,255,.055);font-size:19px}.zoneMult{font-size:8px;font-weight:1000;color:var(--yellow);letter-spacing:.1em}
+.zone h3{font-size:15px;margin:12px 0 5px;letter-spacing:-.03em;position:relative}.zone p{font-size:8px;line-height:1.5;color:var(--muted);margin:0 0 12px;position:relative}.zoneFoot{display:flex;justify-content:space-between;align-items:center;gap:8px;position:relative}.zoneReq{font-size:7px;color:#c6bbd4}.zoneBtn{border:0;border-radius:10px;padding:8px 10px;background:linear-gradient(135deg,var(--yellow),var(--yellow2));color:#241800;font-size:8px;font-weight:1000;cursor:pointer}.zoneBtn:disabled{opacity:.3;filter:grayscale(1)}.zone.current{border-color:rgba(255,216,74,.38);box-shadow:inset 0 0 35px rgba(255,216,74,.05)}.zone.locked{opacity:.62}
+@media(max-width:680px){.roomBadge{top:94px}.mapGrid{grid-template-columns:1fr}.zone{min-height:132px}}
+.mia{position:absolute;z-index:150;left:50%;top:50%;transform:translate(-50%,-50%) scale(.7);width:min(520px,92vw);border-radius:30px;padding:24px;text-align:center;display:none;pointer-events:auto}.mia.show{display:block;animation:mia .48s cubic-bezier(.16,1,.3,1) forwards}@keyframes mia{to{transform:translate(-50%,-50%) scale(1)}}
+.miaTag{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,216,74,.25);background:rgba(255,216,74,.1);color:var(--yellow);font-size:8px;letter-spacing:.15em}.mia h2{font-size:clamp(27px,5vw,45px);margin:12px 0 7px;letter-spacing:-.055em}.mia p{font-size:10px;color:#c8bfd5;line-height:1.6;max-width:390px;margin:0 auto 17px}
+.toast{position:absolute;z-index:180;left:50%;top:135px;transform:translateX(-50%) translateY(-8px);padding:10px 13px;border-radius:13px;background:rgba(15,12,23,.92);border:1px solid var(--line);font-size:8px;opacity:0;pointer-events:none;transition:.22s;box-shadow:0 15px 45px rgba(0,0,0,.45)}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.cinema{position:absolute;inset:0;z-index:200;display:none;place-items:center;background:radial-gradient(circle,rgba(91,48,155,.16),rgba(2,2,4,.91) 68%);pointer-events:auto}.cinema.show{display:grid}
+.cinemaCore{text-align:center;position:relative}.cinemaTitle{font-size:8px;letter-spacing:.3em;color:#cfc3dd;text-transform:uppercase;margin-bottom:16px}.cinemaPack{width:190px;height:240px;margin:auto;border-radius:34px;display:grid;place-items:center;background:linear-gradient(145deg,rgba(255,255,255,.2),transparent 32%),linear-gradient(135deg,#311d50,#120d1f 54%,#4d2875);border:1px solid rgba(255,255,255,.2);box-shadow:0 35px 120px rgba(0,0,0,.72),0 0 80px rgba(155,92,255,.25);animation:cinFloat 1.8s ease-in-out infinite}.cinemaPack.opening{animation:cinOpen 1.1s cubic-bezier(.2,.7,.2,1) forwards}@keyframes cinFloat{50%{transform:translateY(-8px) rotate(2deg)}}@keyframes cinOpen{0%{transform:scale(1)}35%{transform:scale(1.15) rotate(-5deg)}70%{transform:scale(.75) rotate(8deg);filter:brightness(3)}100%{transform:scale(2.4);opacity:0;filter:brightness(6)}}
+.flash{position:absolute;inset:0;z-index:210;background:white;opacity:0;pointer-events:none}.flash.go{animation:flash .55s ease}@keyframes flash{0%{opacity:0}34%{opacity:.95}100%{opacity:0}}
+.cinemaReveal{display:none;text-align:center}.cinemaReveal.show{display:block;animation:reveal .55s cubic-bezier(.16,1,.3,1)}@keyframes reveal{from{opacity:0;transform:scale(.45)}to{opacity:1;transform:scale(1)}}.cinemaOrb{width:185px;height:185px;border-radius:50%;margin:0 auto 12px;display:grid;place-items:center;font-size:68px;background:radial-gradient(circle,rgba(255,255,255,.27),rgba(155,92,255,.08) 48%,transparent 70%)}.cinemaReveal h2{font-size:35px;margin:3px 0;letter-spacing:-.055em}.cinemaReveal p{font-size:9px;color:var(--muted);margin:6px 0 17px}
+.splash{position:absolute;z-index:500;inset:0;background:#07060b;display:grid;place-items:center;transition:.7s cubic-bezier(.76,0,.24,1)}.splash.hide{opacity:0;visibility:hidden;transform:scale(1.035)}.splashInner{text-align:center}.sLogo{width:86px;height:86px;border-radius:28px;margin:0 auto 17px;display:grid;place-items:center;background:linear-gradient(135deg,var(--yellow),#ff9864 48%,var(--purple));color:#161018;font-size:29px;font-weight:1000;box-shadow:0 0 80px rgba(156,85,255,.17)}.splash h1{font-size:29px;margin:0;letter-spacing:-.05em}.splash p{font-size:8px;letter-spacing:.18em;color:var(--muted)}.load{width:190px;height:3px;border-radius:999px;background:rgba(255,255,255,.08);margin:19px auto 0;overflow:hidden}.load i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--purple),var(--yellow));animation:load 1.25s ease forwards}@keyframes load{to{width:100%}}
+@media(max-width:930px){.left{display:none}.right{width:208px}.brandtext{display:none}.brand{padding-right:2px}.rewardDock{left:12px}}
+@media(max-width:680px){
+.roomBadge{top:94px}
+.topbar{top:max(7px,env(safe-area-inset-top));padding:5px;gap:3px}.brand{display:none}.stat{min-width:81px;padding:6px 7px}.stat i{width:24px;height:24px}.stat .v{font-size:10px}
+.levelBox{top:66px;width:74vw}.right{display:none}.rewardDock{left:8px;bottom:92px;width:145px;padding:8px}.rewardIcon{width:34px;height:34px}.rewardDock b{font-size:8px}.rewardDock span{font-size:7px}
+.plantInfo{bottom:94px}.plantName{font-size:27px}.bottomNav{bottom:max(7px,env(safe-area-inset-bottom));width:calc(100vw - 12px);padding:5px;gap:2px}.navBtn{min-width:0;flex:1;height:45px}.seedBtn{min-width:82px;flex:1.35}.cards{grid-template-columns:repeat(2,1fr)}
+.combo{top:39%}.combo b{font-size:28px}.tapHint{top:51%}.modal{padding:17px;border-radius:24px}
+}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="scene"></div>
+  <div class="fx vignette"></div><div class="fx scan"></div><div class="fx grain"></div>
+
+  <div class="hud">
+    <div class="topbar glass">
+      <div class="brand"><div class="brandmark">TP</div><div class="brandtext"><b>TATO, PATRZ!</b><span>GARDEN TYCOON • V3</span></div></div>
+      <div class="stat"><i style="color:var(--yellow)">●</i><div><div class="v" id="coins">0</div><div class="k">monety</div></div></div>
+      <div class="stat"><i style="color:#c995ff">◆</i><div><div class="v" id="gems">0</div><div class="k">kryształy</div></div></div>
+      <div class="stat"><i>⚡</i><div><div class="v" id="income">+0/s</div><div class="k">dochód</div></div></div>
+    </div>
+
+    <div class="levelBox">
+      <div class="levelHead"><b id="level">POZIOM 1</b><span id="xpText">0 / 100 XP</span></div>
+      <div class="xpbar"><div class="xpfill" id="xpfill"></div></div>
+    </div>
+
+    <div class="roomBadge glass" id="roomBadge"><span>⌂</span><b>STUDIO ZERO</b><em>1.00× STREFA</em></div>
+
+    <div class="side left glass">
+      <div class="panelTitle"><b>Misje</b><span>LIVE</span></div>
+      <div class="quest"><div class="questTop"><b>Dotknij roślinę</b><em id="q1t">0/25</em></div><div class="qbar"><div class="qfill" id="q1"></div></div></div>
+      <div class="quest"><div class="questTop"><b>Zarób 2 500</b><em id="q2t">0/2.5K</em></div><div class="qbar"><div class="qfill" id="q2"></div></div></div>
+      <div class="quest"><div class="questTop"><b>Otwórz Seed Drop</b><em id="q3t">0/1</em></div><div class="qbar"><div class="qfill" id="q3"></div></div></div>
+    </div>
+
+    <div class="side right glass">
+      <div class="panelTitle"><b>Ulepszenia</b><span>POWER</span></div>
+      <div id="upgrades"></div>
+    </div>
+
+    <div class="rewardDock glass" id="rewardDock"><div class="rewardIcon">✦</div><div><b>ENERGY DROP</b><span id="rewardTimer">00:60</span></div></div>
+
+    <div class="combo" id="combo"><b id="comboText">×2</b><span>FLOW COMBO</span></div>
+    <div class="tapHint" id="tapHint"><b>DOTKNIJ ROŚLINY</b><span>buduj combo • rozwijaj ogród</span></div>
+
+    <div class="plantInfo">
+      <div class="rarity"><i id="rarityDot"></i><span id="rarity">COMMON</span></div>
+      <h1 class="plantName" id="plantName">Nova Sprout</h1>
+      <div class="plantSub" id="plantSub">Etap 1/6 • mnożnik 1.0×</div>
+    </div>
+
+    <div class="bottomNav glass">
+      <button class="navBtn active" data-panel="garden"><span>✦</span><span>Ogród</span></button>
+      <button class="navBtn" data-panel="collection"><span>◈</span><span>Kolekcja</span></button>
+      <button class="navBtn seedBtn" data-panel="seeds"><span>⬡</span><span>SEED DROP</span></button>
+      <button class="navBtn" data-panel="genetics"><span>⌬</span><span>Genetyka</span></button>
+      <button class="navBtn" data-panel="map"><span>⌘</span><span>Mapa</span></button>
+    </div>
+  </div>
+
+  <div class="modalBack" id="modalBack"><div class="modal glass" id="modal"></div></div>
+
+  <div class="mia glass" id="mia">
+    <span class="miaTag">⚡ MIA EVENT</span>
+    <h2>„Tato… patrz twoje kwiatki!”</h2>
+    <p>Roślina weszła w rezonans. Przez <b>20 sekund</b> wszystkie zyski są mnożone ×5.</p>
+    <button class="claim" id="claimMia">URUCHOM ×5</button>
+  </div>
+
+  <div class="cinema" id="cinema">
+    <div class="cinemaCore">
+      <div id="cinPackWrap">
+        <div class="cinemaTitle">GENETIC DROP • ANALIZA NASIONA</div>
+        <div class="cinemaPack" id="cinPack"><div class="packLogo">✦</div></div>
+      </div>
+      <div class="cinemaReveal" id="cinReveal"></div>
+    </div>
+  </div>
+  <div class="flash" id="flash"></div>
+  <div class="toast" id="toast"></div>
+
+  <div class="splash" id="splash"><div class="splashInner"><div class="sLogo">TP</div><h1>Tato, patrz twoje kwiatki!</h1><p>WORLD EXPANSION • V3</p><div class="load"><i></i></div></div></div>
+</div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+
+const $=s=>document.querySelector(s);
+const fmt=n=>n>=1e9?(n/1e9).toFixed(2)+'B':n>=1e6?(n/1e6).toFixed(2)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':Math.floor(n).toString();
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const rarityData={
+ Common:{color:'#76ff9d',mult:1,glow:0x49ff88},
+ Rare:{color:'#66e8ff',mult:1.6,glow:0x55e8ff},
+ Epic:{color:'#b176ff',mult:2.6,glow:0x9d5cff},
+ Legendary:{color:'#ffd84a',mult:4.5,glow:0xffcf3f},
+ Mythic:{color:'#ff6f9f',mult:8,glow:0xff5c94},
+ Secret:{color:'#ffffff',mult:15,glow:0xffffff}
+};
+const seeds=[
+ {name:'Nova Sprout',rarity:'Common',icon:'🌱',chance:46},
+ {name:'Aqua Pulse',rarity:'Rare',icon:'💧',chance:28},
+ {name:'Violet Orbit',rarity:'Epic',icon:'🪐',chance:16},
+ {name:'Golden Crown',rarity:'Legendary',icon:'👑',chance:7},
+ {name:'Nebula Heart',rarity:'Mythic',icon:'💠',chance:2.5},
+ {name:'Zero Point',rarity:'Secret',icon:'✦',chance:.5}
+];
+const upgradeDefs=[
+ {id:'lamp',icon:'☀',name:'Quantum Lamp',desc:'+35% / poziom',base:180,scale:1.72},
+ {id:'water',icon:'◉',name:'Hydro Core',desc:'+2 monety / sek.',base:320,scale:1.78},
+ {id:'bot',icon:'⌾',name:'Nano Bot',desc:'+1 auto-tap / sek.',base:760,scale:1.84},
+ {id:'lab',icon:'⌬',name:'Gene Lab',desc:'+8% do całości',base:1450,scale:1.9}
+];
+
+const rooms=[
+ {name:'Studio Zero',icon:'⌂',req:1,cost:0,mult:1.00,desc:'Startowa baza. Ciemne studio, neon i pierwsza genetyka.',bg:0x07060b,fog:0x07060b,density:.067,floor:0x0c0911,back:0x0e0b15,key:0xffd66a,rim:0x8d4dff,fill:0x5fe5ff,accent:0x9d55ff,dust:0xb58dff,css:'#9d55ff'},
+ {name:'Neon Rooftop',icon:'▥',req:3,cost:1800,mult:1.25,desc:'Noc nad miastem. Większy przepływ i 25% więcej wszystkiego.',bg:0x06101a,fog:0x07111c,density:.052,floor:0x0a1420,back:0x081522,key:0x69eaff,rim:0xb063ff,fill:0x438cff,accent:0x65e7ff,dust:0x78cfff,css:'#65e7ff'},
+ {name:'Glasshouse',icon:'◇',req:5,cost:8500,mult:1.65,desc:'Szklarnia przyszłości. Zielona energia i 65% premii do produkcji.',bg:0x06100c,fog:0x07150e,density:.047,floor:0x09140e,back:0x0b1711,key:0x9dffad,rim:0x39ff8c,fill:0x61e9ff,accent:0x62ff98,dust:0x83ffb0,css:'#62ff98'},
+ {name:'Gene Lab',icon:'⌬',req:8,cost:32000,mult:2.20,desc:'Laboratorium mutacji. Sprzęt premium i 2.2× do całego ogrodu.',bg:0x100610,fog:0x16081a,density:.058,floor:0x160b18,back:0x170b1d,key:0xff6fb7,rim:0x8f5cff,fill:0x63eaff,accent:0xff6fa8,dust:0xff8fc2,css:'#ff6fa8'},
+ {name:'Orbit Garden',icon:'◉',req:12,cost:140000,mult:3.00,desc:'Ostatnia strefa V3. Ogród orbitalny z potrójnym mnożnikiem.',bg:0x03050d,fog:0x050816,density:.035,floor:0x080b18,back:0x050817,key:0xffffff,rim:0x796bff,fill:0xff72ce,accent:0xffffff,dust:0xffffff,css:'#ffffff'}
+];
+
+let state={coins:0,gems:12,xp:0,level:1,totalCoins:0,taps:0,packs:0,currentSeed:0,collection:[0],upgrades:{lamp:0,water:0,bot:0,lab:0},boostUntil:0,stage:1,rebirths:0,rewardAt:0,claimedDrops:0,currentRoom:0,unlockedRooms:[0],roomVisits:0};
+try{
+ const old=JSON.parse(localStorage.getItem('tptk_save_v2'));
+ if(old) state={...state,...old,upgrades:{...state.upgrades,...(old.upgrades||{})}};
+}catch(e){}
+if(!Array.isArray(state.unlockedRooms)) state.unlockedRooms=[0];
+if(typeof state.currentRoom!=='number'||!state.unlockedRooms.includes(state.currentRoom)) state.currentRoom=0;
+if(!state.rewardAt||state.rewardAt<Date.now()-3600000) state.rewardAt=Date.now()+60000;
+const save=()=>localStorage.setItem('tptk_save_v2',JSON.stringify(state));
+setInterval(save,4000);addEventListener('beforeunload',save);
+
+let audioCtx;
+function tone(freq=440,dur=.08,type='sine',vol=.025){
+ try{audioCtx||=new(window.AudioContext||window.webkitAudioContext)();const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.value=freq;g.gain.value=vol;o.connect(g);g.connect(audioCtx.destination);o.start();g.gain.exponentialRampToValueAtTime(.0001,audioCtx.currentTime+dur);o.stop(audioCtx.currentTime+dur)}catch(e){}
+}
+function chord(){[260,390,520,780].forEach((f,i)=>setTimeout(()=>tone(f,.17,'triangle',.022),i*44))}
+function haptic(ms=14){try{navigator.vibrate&&navigator.vibrate(ms)}catch(e){}}
+
+const scene=new THREE.Scene();scene.fog=new THREE.FogExp2(0x07060b,.067);
+const camera=new THREE.PerspectiveCamera(41,innerWidth/innerHeight,.1,100);camera.position.set(0,2.2,7.55);
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));renderer.setSize(innerWidth,innerHeight);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.16;renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;$('#scene').appendChild(renderer.domElement);
+const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));const bloom=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),.68,.62,.84);composer.addPass(bloom);
+
+scene.add(new THREE.HemisphereLight(0x987cff,0x100d16,1.25));
+const key=new THREE.SpotLight(0xffd66a,34,20,Math.PI/5,.43,1.2);key.position.set(4.5,7,5);key.castShadow=true;scene.add(key);
+const rim=new THREE.PointLight(0x8d4dff,25,12,1.6);rim.position.set(-4.5,3,-2);scene.add(rim);
+const fill=new THREE.PointLight(0x5fe5ff,10,10,1.8);fill.position.set(3.5,1,-2.5);scene.add(fill);
+
+const room=new THREE.Group();scene.add(room);
+const floor=new THREE.Mesh(new THREE.CircleGeometry(8,96),new THREE.MeshStandardMaterial({color:0x0c0911,roughness:.56,metalness:.22}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.46;floor.receiveShadow=true;room.add(floor);
+const backMat=new THREE.MeshStandardMaterial({color:0x0e0b15,roughness:.63,metalness:.15});
+const back=new THREE.Mesh(new THREE.PlaneGeometry(13,8),backMat);back.position.set(0,2,-4.6);room.add(back);
+for(let i=-4;i<=4;i++){
+ const p=new THREE.Mesh(new THREE.BoxGeometry(.035,5.5,.04),new THREE.MeshBasicMaterial({color:i%2?0x34204d:0x251735,transparent:true,opacity:.38}));
+ p.position.set(i*1.35,1.6,-4.52);room.add(p);
+}
+const shelfMat=new THREE.MeshPhysicalMaterial({color:0x181220,metalness:.62,roughness:.28,clearcoat:.45});
+[-2.35,2.35].forEach(x=>{
+ const post=new THREE.Mesh(new THREE.BoxGeometry(.12,4,.18),shelfMat);post.position.set(x,1,-3.25);room.add(post);
+ [0,1.25,2.5].forEach(y=>{
+   const s=new THREE.Mesh(new THREE.BoxGeometry(2.25,.1,.7),shelfMat);s.position.set(x,y-1,-3.12);room.add(s);
+   for(let k=0;k<3;k++){
+     const jar=new THREE.Mesh(new THREE.CylinderGeometry(.12,.14,.35,16),new THREE.MeshPhysicalMaterial({color:k===1?0x584080:0x27334a,transparent:true,opacity:.82,roughness:.2,metalness:.18}));
+     jar.position.set(x-.65+k*.65,y-.78,-2.98);room.add(jar);
+   }
+ });
+});
+[-3.7,3.7].forEach(x=>{
+ const bar=new THREE.Mesh(new THREE.BoxGeometry(.055,4.7,.05),new THREE.MeshBasicMaterial({color:x<0?0x9a54ff:0xffd84a}));
+ bar.position.set(x,1.1,-4.42);room.add(bar);
+ const glow=new THREE.PointLight(x<0?0x9a54ff:0xffd84a,5.5,4,2);glow.position.set(x,1.1,-3.8);room.add(glow);
+});
+const holo=new THREE.Mesh(new THREE.PlaneGeometry(1.8,.85),new THREE.MeshBasicMaterial({color:0x4b2a7a,transparent:true,opacity:.16,side:THREE.DoubleSide}));holo.position.set(0,2.75,-3.95);room.add(holo);
+const holoLine=new THREE.Mesh(new THREE.RingGeometry(.25,.27,48),new THREE.MeshBasicMaterial({color:0xffd84a,transparent:true,opacity:.42,side:THREE.DoubleSide}));holoLine.position.set(0,2.75,-3.91);room.add(holoLine);
+
+const pedestal=new THREE.Group();scene.add(pedestal);
+const base=new THREE.Mesh(new THREE.CylinderGeometry(1.25,1.48,.4,64),new THREE.MeshPhysicalMaterial({color:0x181221,metalness:.58,roughness:.24,clearcoat:1,clearcoatRoughness:.16}));base.position.y=-1.24;base.castShadow=true;base.receiveShadow=true;pedestal.add(base);
+const baseGlow=new THREE.Mesh(new THREE.TorusGeometry(1.27,.026,12,100),new THREE.MeshBasicMaterial({color:0x9d55ff,transparent:true,opacity:.55}));baseGlow.rotation.x=Math.PI/2;baseGlow.position.y=-1.02;pedestal.add(baseGlow);
+const ring=new THREE.Mesh(new THREE.RingGeometry(1.65,1.69,128),new THREE.MeshBasicMaterial({color:0x7d45df,transparent:true,opacity:.28,side:THREE.DoubleSide}));ring.rotation.x=-Math.PI/2;ring.position.y=-1.435;scene.add(ring);
+const ring2=ring.clone();ring2.scale.setScalar(1.55);ring2.material=ring.material.clone();ring2.material.opacity=.11;scene.add(ring2);
+
+const pot=new THREE.Group();pedestal.add(pot);
+const potBody=new THREE.Mesh(new THREE.CylinderGeometry(.73,.55,1.04,48,1,true),new THREE.MeshPhysicalMaterial({color:0x2b213a,metalness:.4,roughness:.25,clearcoat:1,clearcoatRoughness:.16}));potBody.position.y=-.58;potBody.castShadow=true;pot.add(potBody);
+const potRim=new THREE.Mesh(new THREE.TorusGeometry(.73,.09,16,64),new THREE.MeshPhysicalMaterial({color:0x3b2a51,metalness:.45,roughness:.22}));potRim.rotation.x=Math.PI/2;potRim.position.y=-.05;pot.add(potRim);
+const soil=new THREE.Mesh(new THREE.CylinderGeometry(.67,.67,.07,48),new THREE.MeshStandardMaterial({color:0x15100c,roughness:1}));soil.position.y=-.08;pot.add(soil);
+
+const plant=new THREE.Group();plant.position.y=-.03;pedestal.add(plant);let leaves=[],stems=[],growStart=performance.now();
+function clearPlant(){leaves.forEach(m=>{plant.remove(m);m.geometry.dispose();m.material.dispose()});stems.forEach(m=>{plant.remove(m);m.geometry.dispose();m.material.dispose()});leaves=[];stems=[]}
+function branch(a,b,r,mat){
+ const d=new THREE.Vector3().subVectors(b,a),len=d.length(),m=new THREE.Mesh(new THREE.CylinderGeometry(r,r*.86,len,10),mat.clone());
+ m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.clone().normalize());m.castShadow=true;m.userData.targetScale=m.scale.clone();m.scale.set(1,.02,1);plant.add(m);stems.push(m);return m;
+}
+function leaf(pos,s,rot,mat,delay){
+ const m=new THREE.Mesh(new THREE.SphereGeometry(1,18,12),mat.clone());m.position.copy(pos);m.rotation.set(rot.x,rot.y,rot.z);m.castShadow=true;m.userData.target=new THREE.Vector3(s*.5,s*.115,s);m.userData.phase=Math.random()*10;m.userData.delay=delay;m.scale.set(.001,.001,.001);plant.add(m);leaves.push(m);return m;
+}
+function rebuildPlant(){
+ clearPlant();growStart=performance.now();
+ const seed=seeds[state.currentSeed],rd=rarityData[seed.rarity],stage=clamp(state.stage,1,6),hue=new THREE.Color(rd.glow);
+ const stemMat=new THREE.MeshStandardMaterial({color:hue.clone().multiplyScalar(.35),roughness:.52,metalness:.06});
+ const green=new THREE.Color(0x43ff7c);const mix=seed.rarity==='Common'?.72:.28;
+ const leafMat=new THREE.MeshPhysicalMaterial({color:hue.clone().lerp(green,mix),emissive:hue,emissiveIntensity:seed.rarity==='Common'?.035:.12,roughness:.38,metalness:.07,clearcoat:.62,clearcoatRoughness:.28});
+ const h=.74+stage*.38;branch(new THREE.Vector3(0,0,0),new THREE.Vector3(0,h,0),.052+stage*.004,stemMat);
+ const tiers=1+stage;
+ for(let i=1;i<=tiers;i++){
+   const y=.25+i*(h-.2)/(tiers+1),len=.34+stage*.047+(i%3)*.035,endA=new THREE.Vector3(len,y+.06,(i%2)*.13-.05),endB=new THREE.Vector3(-len*.92,y-.01,-(i%2)*.1);
+   branch(new THREE.Vector3(0,y,0),endA,.018+stage*.002,stemMat);branch(new THREE.Vector3(0,y,0),endB,.018+stage*.002,stemMat);
+   leaf(endA.clone().add(new THREE.Vector3(.12,.03,.02)),.31+stage*.03,new THREE.Euler(.18,.18,-.68),leafMat,i*.09);
+   leaf(endB.clone().add(new THREE.Vector3(-.12,.03,-.02)),.31+stage*.03,new THREE.Euler(-.16,-.22,.68),leafMat,i*.09+.05);
+   if(stage>=3&&i%2===0){leaf(new THREE.Vector3(.05,y+.08,.28),.27+stage*.02,new THREE.Euler(.65,0,.1),leafMat,i*.09+.08);leaf(new THREE.Vector3(-.05,y+.05,-.28),.27+stage*.02,new THREE.Euler(-.65,0,-.1),leafMat,i*.09+.1)}
+ }
+ leaf(new THREE.Vector3(0,h+.14,0),.37+stage*.03,new THREE.Euler(.05,0,0),leafMat,.2);
+ plant.scale.setScalar(.88);
+}
+rebuildPlant();
+
+const roomDecor=new THREE.Group();scene.add(roomDecor);
+function roomMult(){return rooms[state.currentRoom]?.mult||1}
+function clearDecor(){
+ while(roomDecor.children.length){const o=roomDecor.children.pop();if(o.geometry)o.geometry.dispose();if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material.dispose()}}
+}
+function addBox(x,y,z,sx,sy,sz,color,emissive=0){
+ const mat=new THREE.MeshStandardMaterial({color,roughness:.42,metalness:.28,emissive:emissive||0,emissiveIntensity:emissive?.35:0});
+ const m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat);m.position.set(x,y,z);roomDecor.add(m);return m
+}
+function addGlowSphere(x,y,z,r,color){
+ const m=new THREE.Mesh(new THREE.SphereGeometry(r,32,24),new THREE.MeshBasicMaterial({color,transparent:true,opacity:.75}));m.position.set(x,y,z);roomDecor.add(m);
+ const l=new THREE.PointLight(color,5,5,2);l.position.set(x,y,z);roomDecor.add(l);return m
+}
+function applyRoomTheme(){
+ const r=rooms[state.currentRoom]||rooms[0];clearDecor();
+ scene.fog.color.setHex(r.fog);scene.fog.density=r.density;renderer.setClearColor(r.bg,1);floor.material.color.setHex(r.floor);backMat.color.setHex(r.back);
+ key.color.setHex(r.key);rim.color.setHex(r.rim);fill.color.setHex(r.fill);baseGlow.material.color.setHex(r.accent);ring.material.color.setHex(r.accent);ring2.material.color.setHex(r.accent);
+ if(typeof dust!=='undefined')dust.material.color.setHex(r.dust);
+ if(state.currentRoom===0){
+   addBox(0,2.72,-4.47,1.7,.04,.05,0x5a367f,0x3b1c61);
+ }else if(state.currentRoom===1){
+   for(let i=-5;i<=5;i++){const h=.6+((i*i+7)%5)*.34;addBox(i*.72,-1.46+h/2,-4.28,.52,h,.5,0x0a2032,i%3===0?0x113b5a:0)}
+   addGlowSphere(2.75,2.65,-4.0,.34,0x9beeff);
+ }else if(state.currentRoom===2){
+   for(let i=-3;i<=3;i++){addBox(i*1.05,.9,-4.38,.04,4.7,.05,0x2c6443,0x103d26)}
+   for(let i=-2;i<=2;i++){const p=new THREE.Mesh(new THREE.CylinderGeometry(.22,.28,.45,20),new THREE.MeshStandardMaterial({color:0x173623,roughness:.75}));p.position.set(i*1.1,-1.18,-2.95);roomDecor.add(p)}
+   addGlowSphere(-2.8,2.3,-4.1,.18,0x65ff9c);addGlowSphere(2.8,2.3,-4.1,.18,0x65ff9c);
+ }else if(state.currentRoom===3){
+   for(let i=-2;i<=2;i++){const tube=new THREE.Mesh(new THREE.CylinderGeometry(.18,.18,2.35,24),new THREE.MeshPhysicalMaterial({color:i%2?0xff6fa8:0x8260ff,transparent:true,opacity:.25,roughness:.1,metalness:.25,clearcoat:1}));tube.position.set(i*.9,.45,-3.65);roomDecor.add(tube);const l=new THREE.PointLight(i%2?0xff6fa8:0x8260ff,2.2,2.2,2);l.position.copy(tube.position);roomDecor.add(l)}
+   addBox(0,-.75,-3.25,3.7,.18,.8,0x251329,0x5b163f);
+ }else if(state.currentRoom===4){
+   addGlowSphere(-2.8,2.0,-4.0,.58,0x846fff);addGlowSphere(2.5,-.1,-4.2,.3,0xff79d3);
+   for(let i=0;i<20;i++){const s=new THREE.Mesh(new THREE.SphereGeometry(.012+Math.random()*.018,5,5),new THREE.MeshBasicMaterial({color:0xffffff}));s.position.set((Math.random()-.5)*9,Math.random()*5-1.2,-4.35);roomDecor.add(s)}
+   const orbit=new THREE.Mesh(new THREE.TorusGeometry(1.2,.018,8,80),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.4}));orbit.position.set(-2.8,2,-3.98);orbit.rotation.x=1.1;roomDecor.add(orbit)
+ }
+}
+function travelTo(id){
+ if(!state.unlockedRooms.includes(id))return;cinematic=true;$('#flash').classList.add('go');camera.position.z=8.9;
+ setTimeout(()=>{state.currentRoom=id;state.roomVisits++;applyRoomTheme();rebuildPlant();updateUI();save();},220);
+ setTimeout(()=>{$('#flash').classList.remove('go');cinematic=false;toast('STREFA: '+rooms[id].name.toUpperCase()+' • '+rooms[id].mult.toFixed(2)+'×')},720)
+}
+
+const dustGeo=new THREE.BufferGeometry(),N=450,pos=new Float32Array(N*3);for(let i=0;i<N;i++){pos[i*3]=(Math.random()-.5)*18;pos[i*3+1]=Math.random()*10-3;pos[i*3+2]=(Math.random()-.5)*13}dustGeo.setAttribute('position',new THREE.BufferAttribute(pos,3));const dust=new THREE.Points(dustGeo,new THREE.PointsMaterial({color:0xb58dff,size:.024,transparent:true,opacity:.48,depthWrite:false}));scene.add(dust);
+const burstGroup=new THREE.Group();scene.add(burstGroup);
+function burst(color=0xffd84a,count=24,power=1){for(let i=0;i<count;i++){const m=new THREE.Mesh(new THREE.SphereGeometry(.02+Math.random()*.028,6,6),new THREE.MeshBasicMaterial({color,transparent:true}));m.position.set((Math.random()-.5)*.35,.65+Math.random()*1.6,(Math.random()-.5)*.35);m.userData.v=new THREE.Vector3((Math.random()-.5)*.05*power,.035+Math.random()*.055*power,(Math.random()-.5)*.05*power);m.userData.life=1;burstGroup.add(m)}}
+
+let targetCamX=0,targetCamY=2.2,cinematic=false,plantKick=0,combo=0,lastTap=0,comboTimer=0;
+addEventListener('pointermove',e=>{if(cinematic)return;const x=e.clientX/innerWidth*2-1,y=e.clientY/innerHeight*2-1;targetCamX=x*.22;targetCamY=2.2-y*.12});
+renderer.domElement.addEventListener('pointerdown',e=>{
+ if(cinematic)return;const rect=renderer.domElement.getBoundingClientRect(),mouse=new THREE.Vector2((e.clientX/rect.width)*2-1,-(e.clientY/rect.height)*2+1),ray=new THREE.Raycaster();ray.setFromCamera(mouse,camera);
+ if(ray.intersectObjects([...leaves,...stems,potBody],true).length)tapPlant(e.clientX,e.clientY);
+});
+
+function seedMult(){return rarityData[seeds[state.currentSeed].rarity].mult}
+function flowMult(){return 1+Math.min(combo,25)*.04}
+function incomePerSec(){const u=state.upgrades,base=u.water*2+u.bot*(1.25+u.lamp*.35);return base*(1+u.lamp*.35)*(1+u.lab*.08)*seedMult()*(1+state.rebirths*.18)*roomMult()*(Date.now()<state.boostUntil?5:1)}
+function tapValue(){const u=state.upgrades;return(7+state.level*1.3)*(1+u.lamp*.35)*(1+u.lab*.08)*seedMult()*(1+state.rebirths*.18)*roomMult()*(Date.now()<state.boostUntil?5:1)*flowMult()}
+function xpNeed(){return 100+Math.floor((state.level-1)*72*Math.pow(1.055,state.level-1))}
+function addCoins(n){state.coins+=n;state.totalCoins+=n}
+function addXp(n){
+ state.xp+=n;while(state.xp>=xpNeed()){state.xp-=xpNeed();state.level++;state.gems+=2;const old=state.stage;state.stage=Math.min(6,1+Math.floor((state.level-1)/2));chord();burst(0xffd84a,52,1.25);toast('POZIOM '+state.level+' • +2 ◆');if(old!==state.stage){rebuildPlant();cameraPunch()}}
+}
+function cameraPunch(){camera.position.z-=.18;setTimeout(()=>{},1)}
+function tapPlant(x,y){
+ const now=performance.now();combo=now-lastTap<680?Math.min(25,combo+1):1;lastTap=now;comboTimer=now+820;
+ const val=tapValue();addCoins(val);addXp(6+combo*.08);state.taps++;plantKick=Math.min(1.25,plantKick+.48);burst(rarityData[seeds[state.currentSeed].rarity].glow,7+Math.floor(combo/5),1);floatText(x,y,'+'+fmt(val));tone(355+combo*5+Math.random()*60,.055,'triangle',.021);haptic(combo>12?22:10);
+ $('#tapHint').style.opacity=Math.max(0,.8-state.taps*.08);showCombo();
+ if(Math.random()<.018){state.gems++;burst(0xb176ff,24,1.4);toast('LUCKY DROP • +1 ◆');tone(880,.14,'triangle',.035)}
+ if(state.taps>0&&state.taps%37===0&&Math.random()<.55&&Date.now()>state.boostUntil)triggerMia();
+ updateUI();
+}
+function showCombo(){const c=$('#combo');$('#comboText').textContent='×'+combo+'  '+flowMult().toFixed(2)+'×';c.classList.add('show')}
+function floatText(x,y,t){const d=document.createElement('div');d.className='floatText';d.textContent=t;d.style.left=x+'px';d.style.top=y+'px';document.body.appendChild(d);setTimeout(()=>d.remove(),850)}
+let toastTimer;function toast(t){const e=$('#toast');e.textContent=t;e.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>e.classList.remove('show'),1800)}
+
+function upgradeCost(d){return Math.floor(d.base*Math.pow(d.scale,state.upgrades[d.id]))}
+function renderUpgrades(){
+ const root=$('#upgrades');root.innerHTML='';
+ upgradeDefs.forEach(d=>{const cost=upgradeCost(d),lv=state.upgrades[d.id],row=document.createElement('div');row.className='upgrade';row.innerHTML='<div class="upIcon">'+d.icon+'</div><div><div class="upName">'+d.name+'</div><div class="upDesc">'+d.desc+'</div><div class="lvl">POZIOM '+lv+'</div></div><button class="buy">'+fmt(cost)+' ●</button>';const b=row.querySelector('button');b.disabled=state.coins<cost;b.onclick=()=>{if(state.coins<cost)return;state.coins-=cost;state.upgrades[d.id]++;tone(520,.08,'triangle',.03);burst(0xffd84a,13,1.1);renderUpgrades();updateUI();save()};root.appendChild(row)})
+}
+function updateUI(){
+ $('#coins').textContent=fmt(state.coins);$('#gems').textContent=fmt(state.gems);$('#income').textContent='+'+fmt(incomePerSec())+'/s';$('#level').textContent='POZIOM '+state.level;$('#xpText').textContent=Math.floor(state.xp)+' / '+xpNeed()+' XP';$('#xpfill').style.width=Math.min(100,state.xp/xpNeed()*100)+'%';
+ const seed=seeds[state.currentSeed],rd=rarityData[seed.rarity];$('#rarity').textContent=seed.rarity.toUpperCase();$('#rarityDot').style.background=rd.color;$('#rarityDot').style.color=rd.color;$('#plantName').textContent=seed.name;$('#plantSub').textContent='Etap '+state.stage+'/6 • '+rd.mult.toFixed(1)+'× genetyka • '+roomMult().toFixed(2)+'× strefa • '+flowMult().toFixed(2)+'× flow';const rb=$('#roomBadge');rb.querySelector('b').textContent=rooms[state.currentRoom].name.toUpperCase();rb.querySelector('em').textContent=roomMult().toFixed(2)+'× STREFA';rb.querySelector('span').textContent=rooms[state.currentRoom].icon;
+ const q1=Math.min(25,state.taps),q2=Math.min(2500,state.totalCoins),q3=Math.min(1,state.packs);$('#q1').style.width=q1/25*100+'%';$('#q1t').textContent=q1+'/25';$('#q2').style.width=q2/2500*100+'%';$('#q2t').textContent=fmt(q2)+'/2.5K';$('#q3').style.width=q3*100+'%';$('#q3t').textContent=q3+'/1';renderUpgrades()
+}
+function updateReward(){
+ const left=Math.max(0,state.rewardAt-Date.now()),dock=$('#rewardDock');
+ if(left<=0){$('#rewardTimer').textContent='GOTOWE • ODBIERZ';dock.classList.add('ready')}else{const s=Math.ceil(left/1000);$('#rewardTimer').textContent='00:'+String(s).padStart(2,'0');dock.classList.remove('ready')}
+}
+$('#rewardDock').onclick=()=>{
+ if(Date.now()<state.rewardAt){toast('DROP JESZCZE SIĘ ŁADUJE');return}
+ const gain=Math.max(250,Math.floor((state.level+1)*180*seedMult()));state.coins+=gain;state.totalCoins+=gain;state.gems+=1;state.claimedDrops++;state.rewardAt=Date.now()+60000;burst(0xffd84a,70,1.5);chord();haptic(35);toast('ENERGY DROP • +'+fmt(gain)+' ● • +1 ◆');save();updateUI();updateReward()
+};
+
+function modalHeader(t,s){return'<div class="modalHeader"><div><h2>'+t+'</h2><p>'+s+'</p></div><button class="close">✕</button></div>'}
+function bindClose(){document.querySelector('.close').onclick=()=>$('#modalBack').classList.remove('open')}
+function openModal(type){const b=$('#modalBack'),m=$('#modal');b.classList.add('open');if(type==='seeds')renderSeeds(m);if(type==='collection')renderCollection(m);if(type==='genetics')renderGenetics(m);if(type==='stats')renderStats(m);if(type==='map')renderMap(m)}
+$('#modalBack').addEventListener('pointerdown',e=>{if(e.target===$('#modalBack'))$('#modalBack').classList.remove('open')});
+document.querySelectorAll('.navBtn').forEach(b=>b.onclick=()=>{document.querySelectorAll('.navBtn').forEach(x=>x.classList.remove('active'));b.classList.add('active');const p=b.dataset.panel;if(p!=='garden')openModal(p)});
+
+function rollSeed(){let r=Math.random()*100,a=0;for(let i=0;i<seeds.length;i++){a+=seeds[i].chance;if(r<=a)return i}return 0}
+function renderSeeds(m){
+ const cost=250+state.packs*35;m.innerHTML=modalHeader('Seed Drop','Cinematic reveal, sześć klas rzadkości i jedna szansa na Secret.')+'<div class="packWrap"><div class="pack"><div class="packLogo">✦</div></div><button class="openPack" id="openPack" '+(state.coins<cost?'disabled':'')+'>OTWÓRZ • '+fmt(cost)+' ●</button><div class="odds">Common 46% • Rare 28% • Epic 16% • Legendary 7% • Mythic 2.5% • Secret 0.5%</div></div>';bindClose();
+ $('#openPack').onclick=()=>{if(state.coins<cost)return;state.coins-=cost;state.packs++;$('#modalBack').classList.remove('open');startSeedCinema(rollSeed());updateUI();save()}
+}
+function startSeedCinema(id){
+ cinematic=true;const seed=seeds[id],rd=rarityData[seed.rarity],cin=$('#cinema'),pack=$('#cinPack'),reveal=$('#cinReveal');cin.classList.add('show');$('#cinPackWrap').style.display='block';reveal.classList.remove('show');reveal.style.display='none';pack.classList.remove('opening');requestAnimationFrame(()=>pack.classList.add('opening'));bloom.strength=1.35;targetCamX=0;targetCamY=2.15;tone(155,.35,'sawtooth',.015);setTimeout(()=>tone(250,.25,'triangle',.025),280);
+ setTimeout(()=>{$('#flash').classList.add('go');burst(rd.glow,90,2);tone(620,.3,'triangle',.035);haptic(45)},720);
+ setTimeout(()=>{
+   $('#cinPackWrap').style.display='none';reveal.style.display='block';reveal.classList.add('show');reveal.innerHTML='<div class="cinemaOrb" style="color:'+rd.color+'">'+seed.icon+'</div><div style="font-size:9px;color:'+rd.color+';font-weight:1000;letter-spacing:.2em">'+seed.rarity.toUpperCase()+'</div><h2>'+seed.name+'</h2><p>'+rd.mult.toFixed(1)+'× produkcji • '+(state.collection.includes(id)?'duplikat':'NOWE ODKRYCIE')+'</p><button class="openPack" id="cinEquip">USTAW W OGRODZIE</button>';if(!state.collection.includes(id))state.collection.push(id);state.currentSeed=id;rebuildPlant();chord();$('#cinEquip').onclick=()=>{cin.classList.remove('show');cinematic=false;bloom.strength=.68;updateUI();save();burst(rd.glow,45,1.2)}
+ },1080);
+ setTimeout(()=>$('#flash').classList.remove('go'),1300)
+}
+function renderCollection(m){
+ let cards='';seeds.forEach((s,i)=>{const u=state.collection.includes(i),rd=rarityData[s.rarity];cards+='<div class="card '+(u?'':'locked')+'" data-id="'+i+'"><div style="font-size:7px;color:'+rd.color+';letter-spacing:.15em">'+s.rarity.toUpperCase()+'</div><div class="big">'+s.icon+'</div><b>'+(u?s.name:'???')+'</b><p>'+(u?rd.mult.toFixed(1)+'× produkcji':'Odkryj w Seed Drop.')+'</p></div>'});m.innerHTML=modalHeader('Kolekcja','Każde nasiono zmienia kolor, światło i mnożnik ogrodu.')+'<div class="cards">'+cards+'</div>';bindClose();m.querySelectorAll('.card:not(.locked)').forEach(c=>c.onclick=()=>{state.currentSeed=+c.dataset.id;rebuildPlant();updateUI();save();$('#modalBack').classList.remove('open');toast('USTAWIONO: '+seeds[state.currentSeed].name)})
+}
+function renderGenetics(m){
+ const can=state.level>=10,bonus=(state.rebirths+1)*18;m.innerHTML=modalHeader('Genetyka','Rebirth resetuje ekonomię, ale kolekcja zostaje. Każdy reset daje stałą przewagę.')+'<div style="padding:25px 2px 6px;text-align:center"><div style="font-size:58px">🧬</div><h3 style="font-size:24px;margin:8px 0">Rebirth #'+state.rebirths+'</h3><p style="font-size:9px;color:var(--muted);line-height:1.6">Następny reset: <b style="color:var(--yellow)">+'+bonus+'%</b> do wszystkich zysków.<br>Wymagany poziom 10.</p><button class="openPack" id="rebirth" '+(can?'':'disabled')+'>RESTARTUJ OGRÓD</button></div>';bindClose();$('#rebirth').onclick=()=>{if(!can)return;state.rebirths++;state.coins=0;state.xp=0;state.level=1;state.stage=1;state.upgrades={lamp:0,water:0,bot:0,lab:0};rebuildPlant();updateUI();save();$('#modalBack').classList.remove('open');burst(0xffffff,95,1.8);toast('GENETYKA +18% NA STAŁE')}
+}
+function renderMap(m){
+ let cards='';
+ rooms.forEach((r,i)=>{
+   const unlocked=state.unlockedRooms.includes(i),current=state.currentRoom===i,levelOk=state.level>=r.req,moneyOk=state.coins>=r.cost;
+   let action='';
+   if(current)action='<button class="zoneBtn" disabled>AKTYWNA</button>';
+   else if(unlocked)action='<button class="zoneBtn" data-travel="'+i+'">WEJDŹ</button>';
+   else action='<button class="zoneBtn" data-unlock="'+i+'" '+((levelOk&&moneyOk)?'':'disabled')+'>ODBLOKUJ</button>';
+   const req=i===0?'START':'LVL '+r.req+' • '+fmt(r.cost)+' ●';
+   cards+='<div class="zone '+(current?'current ':'')+(unlocked?'':'locked')+'" style="--zone:'+r.css+'"><div class="zoneTop"><div class="zoneIcon">'+r.icon+'</div><div class="zoneMult">'+r.mult.toFixed(2)+'×</div></div><h3>'+r.name+'</h3><p>'+r.desc+'</p><div class="zoneFoot"><span class="zoneReq">'+(unlocked?'ODBLOKOWANA':req)+'</span>'+action+'</div></div>'
+ });
+ m.innerHTML=modalHeader('Mapa stref','Odblokowuj kolejne lokacje. Każda ma własny klimat 3D i stały mnożnik produkcji.')+'<div class="mapGrid">'+cards+'</div>';bindClose();
+ m.querySelectorAll('[data-travel]').forEach(b=>b.onclick=()=>{$('#modalBack').classList.remove('open');travelTo(+b.dataset.travel)});
+ m.querySelectorAll('[data-unlock]').forEach(b=>b.onclick=()=>{const id=+b.dataset.unlock,r=rooms[id];if(state.level<r.req||state.coins<r.cost)return;state.coins-=r.cost;if(!state.unlockedRooms.includes(id))state.unlockedRooms.push(id);state.currentRoom=id;state.roomVisits++;applyRoomTheme();rebuildPlant();updateUI();save();$('#modalBack').classList.remove('open');burst(r.accent,85,1.7);chord();toast('NOWA STREFA: '+r.name.toUpperCase())})
+}
+function renderStats(m){
+ m.innerHTML=modalHeader('Statystyki','Twój ogród w liczbach.')+'<div class="cards"><div class="card"><div class="big">●</div><b>'+fmt(state.totalCoins)+'</b><p>monet łącznie</p></div><div class="card"><div class="big">☝</div><b>'+fmt(state.taps)+'</b><p>dotknięć</p></div><div class="card"><div class="big">⬡</div><b>'+state.packs+'</b><p>Seed Dropów</p></div><div class="card"><div class="big">◈</div><b>'+state.collection.length+'/6</b><p>odkrytych nasion</p></div><div class="card"><div class="big">✦</div><b>'+state.claimedDrops+'</b><p>Energy Dropów</p></div><div class="card"><div class="big">⚡</div><b>'+fmt(incomePerSec())+'/s</b><p>dochód</p></div></div>';bindClose()
+}
+function triggerMia(){$('#mia').classList.add('show');tone(740,.18,'triangle',.032);setTimeout(()=>tone(980,.18,'triangle',.028),120)}
+$('#claimMia').onclick=()=>{state.boostUntil=Date.now()+20000;$('#mia').classList.remove('show');burst(0xffd84a,85,1.6);toast('BOOST ×5 • 20 SEKUND');updateUI()};
+
+setInterval(()=>{addCoins(incomePerSec()/10);if(state.upgrades.bot>0)addXp(state.upgrades.bot*.015);if(performance.now()>comboTimer&&combo>0){combo=0;$('#combo').classList.remove('show')}updateUI();updateReward()},100);
+
+const clock=new THREE.Clock();
+function animate(){
+ requestAnimationFrame(animate);const t=clock.getElapsedTime(),now=performance.now();
+ dust.rotation.y=t*.008;dust.position.y=Math.sin(t*.16)*.08;holoLine.rotation.z=t*.35;holoLine.material.opacity=.32+Math.sin(t*2)*.1;
+ plant.rotation.y=Math.sin(t*.33)*.025;
+ const grow=(now-growStart)/1000;
+ stems.forEach((s,i)=>{const p=clamp((grow-i*.025)/.55,0,1),e=1-Math.pow(1-p,3);s.scale.y=Math.max(.02,e)});
+ leaves.forEach((l,i)=>{const p=clamp((grow-l.userData.delay)/.5,0,1),e=1-Math.pow(1-p,3),pulse=1+Math.sin(t*1.05+l.userData.phase)*.017;l.scale.copy(l.userData.target).multiplyScalar(e*pulse)});
+ plantKick*=.87;plant.scale.setScalar(.88+plantKick*.043);plant.rotation.z=Math.sin(t*.42)*.008+plantKick*.022;
+ ring.rotation.z=t*.055;ring2.rotation.z=-t*.038;ring.material.opacity=.22+Math.sin(t*1.5)*.07;baseGlow.material.opacity=.42+Math.sin(t*2)*.1;
+ const tz=cinematic?5.95:7.55,ty=cinematic?2.05:targetCamY,tx=cinematic?0:targetCamX;camera.position.x+=(tx-camera.position.x)*.035;camera.position.y+=(ty-camera.position.y)*.035;camera.position.z+=(tz-camera.position.z)*.045;camera.lookAt(0,.52,0);
+ for(let i=burstGroup.children.length-1;i>=0;i--){const p=burstGroup.children[i];p.position.add(p.userData.v);p.userData.v.y-=.00125;p.userData.life-=.024;p.material.opacity=p.userData.life;if(p.userData.life<=0){burstGroup.remove(p);p.geometry.dispose();p.material.dispose()}}
+ composer.render()
+}
+animate();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight)});
+applyRoomTheme();setTimeout(()=>$('#splash').classList.add('hide'),1450);updateUI();updateReward();if(state.taps===0)setTimeout(()=>toast('DOTKNIJ ROŚLINY • ZBUDUJ FLOW COMBO'),1850);
+</script>
+</body>
+</html>
