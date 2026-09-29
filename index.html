@@ -68,7 +68,7 @@
     <div class="copy">
       <div class="tag">PUFFO ORIGINAL GAME • DELUXE</div>
       <h1>PUFFO:<br><span>BUD RUN</span></h1>
-      <p>Pełny premium pass: cztery strefy, ruchome platformy, wall-jump, dash, slam, hazardy, sekrety, combo, checkpointy i boss w kilku fazach. To już ma być gra, a nie demonstracja.</p>
+      <p>Cztery strefy, 23 ukryte kwiaty i jeden boss. Przeskakuj dachy, łącz ruchy w combo i otwórz bramę na końcu miasta.</p>
       <button class="play" id="play">START DELUXE RUN</button>
       <div class="meta">Cel: znajdź 18 Golden Buds i pokonaj Mold Kinga.<br>Najlepszy wynik: <span id="best">0</span></div>
     </div>
@@ -166,6 +166,32 @@ function background(tt){const zi=zIndex(hero.x),z=zones[zi],gr=ctx.createLinearG
 ctx.save();ctx.translate(-cam.x*.07,0);for(const s of stars){ctx.globalAlpha=s.a*(.66+.34*Math.sin(tt*.8+s.x));ctx.fillStyle=zi===1?'#b8ffd0':zi===2?'#bceeff':'#ffe982';ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill()}ctx.restore();ctx.globalAlpha=1;
 ctx.save();ctx.translate(-cam.x*.15,0);ctx.fillStyle=z.mid;ctx.globalAlpha=.28;for(let i=0;i<23;i++){const bx=i*460-120;ctx.beginPath();ctx.moveTo(bx,H);ctx.lineTo(bx+230,220+(i%4)*52);ctx.lineTo(bx+460,H);ctx.fill()}ctx.restore();ctx.globalAlpha=1;
 ctx.save();ctx.translate(-cam.x*.28,0);for(let i=0;i<44;i++){const bx=i*235,h=120+(i*83)%300,by=WORLD.ground-h+55;ctx.fillStyle=zi===1?(i%3===0?'#0d2b1d':'#0b2118'):zi===2?(i%3===0?'#0b2535':'#0c1723'):zi===3?'#21101e':'#10142a';ctx.fillRect(bx,by,150,h);ctx.fillStyle=zi===1?'rgba(103,255,156,.11)':zi===2?'rgba(100,231,255,.1)':zi===3?'rgba(255,95,130,.11)':'rgba(255,215,45,.11)';for(let wy=by+20;wy<by+h-12;wy+=30)for(let wx=bx+18;wx<bx+130;wx+=31)if(((wx+wy+i)%5)<2)ctx.fillRect(wx,wy,7,4)}ctx.restore();
+// Landmark silhouettes move at a different speed from the playable world.
+ctx.save();ctx.translate(-cam.x*.22,0);
+const first=Math.max(0,Math.floor(cam.x*.22/720)-1),last=Math.min(20,first+5);
+for(let i=first;i<last;i++){
+ const x=i*720+170,base=WORLD.ground+44,top=220+(i%3)*40;
+ ctx.globalAlpha=.26;ctx.strokeStyle=z.accent;ctx.lineWidth=3;
+ if(zi===0){
+  ctx.fillStyle='#12152a';ctx.fillRect(x,top,330,base-top);
+  ctx.strokeRect(x+15,top+15,300,base-top-30);
+  ctx.fillStyle=z.accent;ctx.font='900 27px system-ui';ctx.fillText(i%2?'PUFFO':'NIGHT / 420',x+33,top+75);
+  for(let j=0;j<4;j++){ctx.fillRect(x+34+j*73,top+115,43,5);ctx.fillRect(x+34+j*73,top+158,43,5)}
+  ctx.beginPath();ctx.moveTo(x+240,top);ctx.lineTo(x+240,top-65);ctx.stroke();
+ }else if(zi===1){
+  ctx.strokeRect(x,top+45,330,base-top-45);
+  for(let j=0;j<5;j++){ctx.beginPath();ctx.moveTo(x+j*66,top+45);ctx.lineTo(x+j*66,base);ctx.stroke()}
+  ctx.beginPath();ctx.moveTo(x,top+45);ctx.quadraticCurveTo(x+165,top-110,x+330,top+45);ctx.stroke();
+  ctx.fillStyle=z.accent;ctx.beginPath();ctx.ellipse(x+165,top+155,48,130,0,0,Math.PI*2);ctx.fill();
+ }else if(zi===2){
+  for(let j=0;j<4;j++){ctx.strokeRect(x+j*77,top+25,55,base-top-25);ctx.beginPath();ctx.arc(x+j*77+27,top+100,16,0,Math.PI*2);ctx.stroke()}
+  ctx.fillRect(x-15,top+5,340,12);ctx.fillRect(x+155,top-85,12,90);
+ }else{
+  ctx.beginPath();ctx.ellipse(x+150,base-140,130,215,0,0,Math.PI*2);ctx.stroke();
+  for(let j=0;j<6;j++){ctx.beginPath();ctx.moveTo(x+150,base-150);ctx.lineTo(x-40+j*72,top-45);ctx.stroke()}
+ }
+}
+ctx.restore();ctx.globalAlpha=1;
 if(zi===0){ctx.save();ctx.strokeStyle='rgba(100,231,255,.13)';ctx.lineWidth=1;for(const r of rain){const sx=(r.x-cam.x*.36)%(WORLD.w+W);ctx.beginPath();ctx.moveTo(sx,r.y);ctx.lineTo(sx-8,r.y+r.l);ctx.stroke();r.y+=r.s/60;if(r.y>H+80)r.y=-60}ctx.restore()}
 if(zi===1){ctx.save();ctx.globalAlpha=.12;ctx.strokeStyle='#64ff9a';for(let i=0;i<12;i++){const xx=(i*680-cam.x*.22)%WORLD.w;ctx.beginPath();ctx.arc(xx,250+(i%3)*90,90+(i%4)*18,0,Math.PI*2);ctx.stroke()}ctx.restore()}
 if(zi===2){ctx.save();ctx.globalAlpha=.12;ctx.fillStyle='#64e7ff';for(let i=0;i<12;i++){const xx=(i*720-cam.x*.24)%WORLD.w;ctx.fillRect(xx,160,5,420);ctx.fillRect(xx-70,280,140,4)}ctx.restore()}
@@ -187,8 +213,26 @@ function decor(tt,zi,z){
  }
  ctx.restore();
 }
+function drawPlatform(p,zi,z){
+ const x=p[0],y=p[1],w=p[2],h=p[3];
+ if(x>cam.x+W+260||x+w<cam.x-260)return;
+ ctx.save();const body=ctx.createLinearGradient(x,y,x,y+Math.min(220,h));
+ body.addColorStop(0,zi===1?'#254932':zi===2?'#233c50':zi===3?'#4b263d':'#27334d');
+ body.addColorStop(.15,zi===1?'#122b20':zi===2?'#101e2c':zi===3?'#261626':'#141b2c');body.addColorStop(1,'#080c17');
+ ctx.fillStyle=body;rr(x,y,w,h,7);ctx.fill();
+ ctx.fillStyle=z.accent;ctx.globalAlpha=.68;ctx.fillRect(x+3,y+2,w-6,3);ctx.globalAlpha=1;
+ ctx.fillStyle='#ffffff1b';ctx.fillRect(x+4,y+7,w-8,2);
+ ctx.strokeStyle='#ffffff13';ctx.lineWidth=2;
+ for(let q=x+28;q<x+w-10;q+=56){
+  ctx.beginPath();ctx.moveTo(q,y+13);ctx.lineTo(q+18,y+13);ctx.lineTo(q+18,y+23);ctx.stroke();
+  if(h>100){ctx.strokeRect(q,y+45,30,34);ctx.fillStyle=z.accent;ctx.globalAlpha=.16;ctx.fillRect(q+4,y+50,22,3);ctx.globalAlpha=1}
+ }
+ ctx.fillStyle=zi===1?'#43835c':zi===3?'#8e4961':'#557299';
+ for(let q=x+15;q<x+w-12;q+=43){ctx.beginPath();ctx.moveTo(q,y);ctx.lineTo(q+9,y-5-(q%4));ctx.lineTo(q+18,y);ctx.fill()}
+ ctx.restore();
+}
 function drawWorld(tt){background(tt);ctx.save();ctx.translate(W/2,H/2);ctx.scale(zoom,zoom);ctx.translate(-W/2,-H/2);ctx.translate(-cam.x,-cam.y);const zi=zIndex(hero.x),z=zones[zi];const gg=ctx.createLinearGradient(0,WORLD.ground,0,WORLD.ground+290);gg.addColorStop(0,zi===1?'#153c27':zi===2?'#10263a':zi===3?'#2c1329':'#172038');gg.addColorStop(.11,zi===1?'#0c2318':zi===2?'#0a1622':zi===3?'#160c19':'#0d1424');gg.addColorStop(1,'#05060a');ctx.fillStyle=gg;ctx.fillRect(0,WORLD.ground,WORLD.w,310);decor(tt,zi,z);
-for(const p of platforms){ctx.fillStyle=zi===1?'#11291d':zi===2?'#111d2a':zi===3?'#241322':'#131827';rr(p[0],p[1],p[2],p[3],10);ctx.fill();ctx.fillStyle=z.accent;ctx.globalAlpha=.12;ctx.fillRect(p[0],p[1],p[2],4);ctx.globalAlpha=1;ctx.fillStyle=zi===1?'#315d3f':zi===2?'#284861':zi===3?'#65304d':'#34415b';for(let q=p[0]+8;q<p[0]+p[2];q+=28)ctx.fillRect(q,p[1]-4-(q%3)*2,11,7)}
+for(const p of platforms)drawPlatform(p,zi,z);
 for(const m of movers){ctx.fillStyle='#20243a';rr(m.x,m.y,m.w,m.h,8);ctx.fill();ctx.fillStyle=z.accent;ctx.globalAlpha=.36;ctx.fillRect(m.x+8,m.y+4,m.w-16,3);ctx.globalAlpha=1}
 for(const h of hazards){if(h.t==='acid'){ctx.fillStyle='rgba(110,255,145,.22)';ctx.fillRect(h.x,h.y,h.w,h.h);ctx.fillStyle='#67ff98';for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(h.x+15+i*25,h.y+5+Math.sin(tt*4+i)*3,4,0,Math.PI*2);ctx.fill()}}else if(h.t==='laser'){ctx.fillStyle='rgba(100,231,255,.16)';ctx.fillRect(h.x,h.y,h.w,h.h);ctx.strokeStyle='#64e7ff';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(h.x,h.y+6);ctx.lineTo(h.x+h.w,h.y+6);ctx.stroke()}else{ctx.fillStyle='rgba(255,95,130,.17)';ctx.fillRect(h.x,h.y,h.w,h.h);ctx.fillStyle='#ff5f82';for(let i=0;i<5;i++){ctx.beginPath();ctx.arc(h.x+12+i*24,h.y+8+Math.sin(tt*3+i)*4,3,0,Math.PI*2);ctx.fill()}}}
 for(const p of pads){ctx.fillStyle='#8e56ff';rr(p.x,p.y,p.w,p.h,7);ctx.fill();ctx.fillStyle='white';ctx.globalAlpha=.45;ctx.fillRect(p.x+10,p.y+4,p.w-20,3);ctx.globalAlpha=1}
